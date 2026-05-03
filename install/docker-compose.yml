@@ -1,0 +1,282 @@
+# =============================================================================
+#  Ergenekon Sistemi — Production Compose (Pre-built Images)
+#
+#  Bu dosya install.sh tarafından indirilir. Sadece Docker Hub'daki hazır
+#  image'ları kullanır — local build YOK.
+#
+#  Güncelleme:
+#    docker compose pull
+#    docker compose up -d
+#  veya: Umay'ın Ayarlar > Sistem > Şimdi Güncelle butonu ile (tek tık).
+# =============================================================================
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # ── Postgres ─────────────────────────────────────────────────────────────
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: ergenekon-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-ergenekon}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "max_connections=300"
+    volumes:
+      - ergenekon_pgdata:/var/lib/postgresql/data
+      - ergenekon_backups:/var/lib/postgresql/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-ergenekon}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+  # ── Redis ────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ergenekon-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - ergenekon_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+  # ── HTTPS sertifika üretimi (ilk çalıştırmada) ──────────────────────────
+  # network_mode: host → sunucunun tüm IP'leri hostname -I ile tespit edilir.
+  # Sertifika bu IP'lerin tamamını + domain'i kapsar; kullanıcı hangi
+  # adresle bağlanırsa bağlansın "Güvenli Değil" uyarısı almaz.
+  cert-init:
+    image: alpine:3.19
+    container_name: ergenekon-cert-init
+    network_mode: host
+    volumes:
+      - ./nginx/certs:/certs
+    environment:
+      DOMAIN: ${DOMAIN:-}
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache openssl > /dev/null 2>&1
+        if [ -f /certs/server.crt ]; then
+          echo "[cert-init] Sertifikalar zaten mevcut, atlaniyor."
+          exit 0
+        fi
+        echo "[cert-init] Sertifikalar uretiliyor..."
+
+        # Tüm sunucu IP'lerini tespit et (Docker bridge ve link-local hariç)
+        SAN="DNS:localhost,IP:127.0.0.1"
+        for ip in $(hostname -I 2>/dev/null); do
+          case "$ip" in
+            127.*|172.1[6-9].*|172.2[0-9].*|172.3[0-1].*|169.254.*|::*) continue ;;
+            *) SAN="${SAN},IP:${ip}" ;;
+          esac
+        done
+        # Domain varsa ekle (en başa, öncelikli)
+        [ -n "${DOMAIN:-}" ] && SAN="DNS:${DOMAIN},${SAN}"
+
+        echo "[cert-init] SAN: $SAN"
+        openssl genrsa -out /certs/ca.key 4096 2>/dev/null
+        openssl req -new -x509 -days 3650 \
+          -key /certs/ca.key -out /certs/ca.crt \
+          -subj "/CN=Ergenekon Local CA/O=Ergenekon/C=TR"
+        openssl genrsa -out /certs/server.key 2048 2>/dev/null
+        openssl req -new -key /certs/server.key -out /certs/server.csr \
+          -subj "/CN=Ergenekon/O=Ergenekon/C=TR"
+        echo "subjectAltName=$SAN" > /tmp/san.ext
+        echo "extendedKeyUsage=serverAuth" >> /tmp/san.ext
+        openssl x509 -req -days 3650 \
+          -in /certs/server.csr -CA /certs/ca.crt -CAkey /certs/ca.key -CAcreateserial \
+          -out /certs/server.crt -extfile /tmp/san.ext
+        chmod 644 /certs/ca.crt /certs/server.crt
+        chmod 600 /certs/ca.key /certs/server.key
+        echo "[cert-init] Hazir. Kapsam: $SAN"
+    restart: "no"
+
+  # ── Umay Backend ────────────────────────────────────────────────────────
+  umay-backend:
+    image: signorali/umay-backend:${APP_VERSION:-3.3.1}
+    container_name: umay-backend
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: umay
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - umay_backend_storage:/app/storage
+      - umay_backend_backups:/app/backups
+      # Tek-tık güncelleme için Docker socket erişimi
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "127.0.0.1:${UMAY_BACKEND_PORT:-1923}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+  # ── Umay Frontend ───────────────────────────────────────────────────────
+  umay-frontend:
+    image: signorali/umay-frontend:${APP_VERSION:-3.3.1}
+    container_name: umay-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${UMAY_FRONTEND_PORT:-1881}:80"
+    depends_on:
+      - umay-backend
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+  # ── Umay Worker (planlı ödeme + KK kapanma + bildirim) ──────────────────
+  umay-worker:
+    image: signorali/umay-backend:${APP_VERSION:-3.3.1}
+    container_name: umay-worker
+    restart: unless-stopped
+    command: ["python", "-m", "app.workers.scheduler"]
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: umay
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    volumes:
+      - umay_backend_storage:/app/storage
+    depends_on:
+      umay-backend:
+        condition: service_started
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+  # ── Ötüken Backend (Enterprise lisansla aktif) ──────────────────────────
+  otuken-backend:
+    image: signorali/otuken-backend:${APP_VERSION:-3.3.1}
+    container_name: otuken-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://${DB_USER:-postgres}:${DB_PASSWORD}@db:5432/umay
+      UMAY_BASE_URL: http://umay-backend:8000
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+    ports:
+      - "127.0.0.1:${OTUKEN_BACKEND_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      umay-backend:
+        condition: service_started
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+  # ── Ötüken Frontend ─────────────────────────────────────────────────────
+  otuken-frontend:
+    image: signorali/otuken-frontend:${APP_VERSION:-3.3.1}
+    container_name: otuken-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${OTUKEN_FRONTEND_PORT:-5174}:80"
+    depends_on:
+      - otuken-backend
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+  # ── Ötüken Sync Worker (Ötüken→Umay finance event sync) ─────────────────
+  otuken-sync-worker:
+    image: signorali/otuken-backend:${APP_VERSION:-3.3.1}
+    container_name: otuken-sync-worker
+    restart: unless-stopped
+    command: ["python", "/app/scripts/sync_queue_worker.py"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://${DB_USER:-postgres}:${DB_PASSWORD}@db:5432/umay
+      UMAY_BASE_URL: http://umay-backend:8000
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+    depends_on:
+      otuken-backend:
+        condition: service_started
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+  # ── HTTPS Proxy (nginx) ─────────────────────────────────────────────────
+  ergenekon-proxy:
+    image: nginx:1.27-alpine
+    container_name: ergenekon-proxy
+    restart: unless-stopped
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
+      umay-frontend:
+        condition: service_started
+      umay-backend:
+        condition: service_started
+      otuken-frontend:
+        condition: service_started
+      otuken-backend:
+        condition: service_started
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    ports:
+      - "${PROXY_HTTP_PORT:-80}:80"
+      - "${PROXY_HTTPS_PORT:-443}:443"
+      - "${PROXY_OTUKEN_PORT:-4443}:4443"
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+# ── Volumes ────────────────────────────────────────────────────────────────
+volumes:
+  ergenekon_pgdata:
+  ergenekon_backups:
+  ergenekon_redis_data:
+  umay_backend_storage:
+    name: ergenekon_umay_storage
+  umay_backend_backups:
+    name: ergenekon_umay_backups
+
+# ── Networks ───────────────────────────────────────────────────────────────
+networks:
+  ergenekon_net:
+    name: ergenekon_net
+    driver: bridge

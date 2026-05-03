@@ -1,0 +1,59 @@
+# =============================================================================
+#  Ergenekon — .gitignore
+#  GitHub'a sadece install/ , docs/ , README , CHANGELOG , .github/ gider.
+#  Kaynak kod, yerel yapılandırma ve sırlar hariç tutulur.
+# =============================================================================
+
+# ── Kaynak kod (kapalı kaynak) ────────────────────────────────────────────────
+umay/
+otuken/
+Mobil Uygulama/
+
+# ── Yerel / cihaza özgü yapılandırmalar ──────────────────────────────────────
+Local/
+Qnap/
+install/docker-compose.qnap.yml
+
+# ── Sır içeren dosyalar ───────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.env
+
+# ── Sertifikalar (sunucuda üretilir) ─────────────────────────────────────────
+nginx/certs/
+install/nginx/certs/
+**/*.crt
+**/*.key
+**/*.csr
+**/*.srl
+!docs/**
+
+# ── Build çıktıları ───────────────────────────────────────────────────────────
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+*.apk
+
+# ── IDE / OS ──────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ── Runtime ───────────────────────────────────────────────────────────────────
+docker-volumes/
+backups/
+*.log
+*.sql.enc
+*.manifest.json
+audit-reports/

@@ -1,0 +1,113 @@
+name: 🐳 Docker Hub Sync Check
+
+# Docker Hub'da yeni bir sürüm yayınlandığında ama GitHub tag'i yoksa
+# otomatik issue açar — "bu sürüm için release oluşturmayı unutmayın" hatırlatıcısı
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # Her gün 08:00 UTC
+  workflow_dispatch:        # Manuel tetikleme
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check-sync:
+    name: Check Docker Hub vs GitHub Releases
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get latest Docker Hub version
+        id: dockerhub
+        run: |
+          LATEST=$(curl -s "https://hub.docker.com/v2/repositories/signorali/umay-backend/tags/?page_size=10&ordering=last_updated" \
+            | jq -r '[.results[] | select(.name != "latest")] | .[0].name')
+          echo "version=$LATEST" >> $GITHUB_OUTPUT
+          echo "Docker Hub son sürüm: $LATEST"
+
+      - name: Get latest GitHub Release
+        id: github_release
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            const releases = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 1
+            });
+            const latest = releases.data[0];
+            if (!latest) return 'none';
+            // Tag'den v prefix'ini kaldır
+            return latest.tag_name.replace(/^v/, '');
+
+      - name: Compare versions
+        id: compare
+        run: |
+          DH="${{ steps.dockerhub.outputs.version }}"
+          GH="${{ steps.github_release.outputs.result }}"
+          echo "Docker Hub: $DH"
+          echo "GitHub:     $GH"
+          if [ "$DH" != "$GH" ] && [ "$DH" != "none" ] && [ "$DH" != "" ]; then
+            echo "out_of_sync=true" >> $GITHUB_OUTPUT
+            echo "⚠️  Sürüm uyuşmazlığı: Docker Hub=$DH, GitHub=$GH"
+          else
+            echo "out_of_sync=false" >> $GITHUB_OUTPUT
+            echo "✅ Sürümler senkronda"
+          fi
+
+      - name: Open reminder issue if out of sync
+        if: steps.compare.outputs.out_of_sync == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const dhVersion = '${{ steps.dockerhub.outputs.version }}';
+            const ghVersion = '${{ steps.github_release.outputs.result }}';
+
+            // Aynı konu için açık issue var mı kontrol et
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'release-sync'
+            });
+
+            const alreadyOpen = issues.data.some(i =>
+              i.title.includes(dhVersion)
+            );
+
+            if (alreadyOpen) {
+              console.log('Zaten açık bir issue var, atlanıyor.');
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🐳 Docker Hub ${dhVersion} → GitHub Release oluşturulacak`,
+              body: [
+                `## Release Hatırlatıcısı`,
+                '',
+                `Docker Hub'da **${dhVersion}** sürümü yayınlandı ancak GitHub Release henüz oluşturulmadı.`,
+                '',
+                `| | Sürüm |`,
+                `|---|---|`,
+                `| Docker Hub | \`${dhVersion}\` |`,
+                `| GitHub Son Release | \`${ghVersion}\` |`,
+                '',
+                `### Yapılacaklar`,
+                `1. \`CHANGELOG.md\`'yi güncelleyin`,
+                `2. Tag oluşturun:`,
+                `   \`\`\`bash`,
+                `   git tag v${dhVersion}`,
+                `   git push --tags`,
+                `   \`\`\``,
+                `3. GitHub Action otomatik olarak Release oluşturacak`,
+                '',
+                `**Docker Hub:** https://hub.docker.com/r/signorali/umay-backend/tags?name=${dhVersion}`,
+              ].join('\n'),
+              labels: ['release-sync']
+            });
+
+            console.log(`Issue oluşturuldu: v${dhVersion} için release hatırlatıcısı`);
