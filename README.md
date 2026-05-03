@@ -6,7 +6,7 @@
 
 **Umay** · Finansal Yönetim &nbsp;|&nbsp; **Ötüken** · Arazi & Operasyon Yönetimi
 
-*Self-hosted, integrated farm & business management platform*
+*Kişisel & aile bütçesi · Tarım operasyon ve maliyet takibi · Self-hosted*
 
 [![Docker Hub](https://img.shields.io/docker/v/signorali/umay-backend?label=Docker%20Hub&logo=docker&color=2496ED)](https://hub.docker.com/r/signorali/umay-backend)
 [![Docker Pulls](https://img.shields.io/docker/pulls/signorali/umay-backend?logo=docker&color=2496ED)](https://hub.docker.com/r/signorali/umay-backend)
@@ -26,11 +26,11 @@
 <div align="center">
 <table>
 <tr>
-<td align="center"><img src="docs/assets/screenshots/umay-dashboard.png" width="380" alt="Umay Dashboard"/><br/><sub>Ana Sayfa / Dashboard</sub></td>
-<td align="center"><img src="docs/assets/screenshots/umay-transactions.png" width="380" alt="İşlemler"/><br/><sub>İşlemler / Transactions</sub></td>
+<td align="center"><img src="docs/assets/screenshots/umay-dashboard-v2.png" width="380" alt="Umay Dashboard"/><br/><sub>Ana Sayfa / Dashboard</sub></td>
+<td align="center"><img src="docs/assets/screenshots/umay-transactions-v2.png" width="380" alt="İşlemler"/><br/><sub>İşlemler / Transactions</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/assets/screenshots/umay-reports.png" width="380" alt="Raporlar"/><br/><sub>Raporlar / Reports</sub></td>
+<td align="center"><img src="docs/assets/screenshots/umay-reports-v2.png" width="380" alt="Raporlar"/><br/><sub>Raporlar / Reports</sub></td>
 </tr>
 </table>
 </div>
@@ -40,8 +40,8 @@
 <div align="center">
 <table>
 <tr>
-<td align="center"><img src="docs/assets/screenshots/otuken-operations.png" width="380" alt="Operasyon"/><br/><sub>Operasyon Takibi / Operations</sub></td>
-<td align="center"><img src="docs/assets/screenshots/otuken-sales.png" width="380" alt="Satış"/><br/><sub>Hasat Satışları / Harvest Sales</sub></td>
+<td align="center"><img src="docs/assets/screenshots/otuken-operations-v2.png" width="380" alt="Operasyon"/><br/><sub>Operasyon Takibi / Operations</sub></td>
+<td align="center"><img src="docs/assets/screenshots/otuken-sales-v2.png" width="380" alt="Satış"/><br/><sub>Hasat Satışları / Harvest Sales</sub></td>
 </tr>
 </table>
 </div>
@@ -60,12 +60,12 @@ curl -fsSL https://get.umay.app/install | sudo bash
 
 ### Sistem Nedir?
 
-**Ergenekon Entegre Sistemi**, iki birbirini tamamlayan modülden oluşur:
+**Ergenekon**, kişisel ve aile bütçesini yönetmek ile tarımsal operasyon maliyetlerini takip etmek için tasarlanmış, kendi sunucunuzda çalışan entegre bir yazılımdır. İki birbirini tamamlayan modülden oluşur:
 
-- 🏦 **Umay** — Finansal yönetim: gelir/gider, banka hesapları, kredi kartları, raporlar, varlık takibi
-- 🌾 **Ötüken** — Arazi & operasyon yönetimi: sulama, gübreleme, hasat, envanter, satış, maliyet takibi
+- 🏦 **Umay** — Kişisel & aile finansmanı: gelir/gider, banka hesapları, kredi kartları, varlık takibi, raporlar
+- 🌾 **Ötüken** — Tarım operasyonu ve maliyet hesaplama: sulama, gübreleme, hasat, envanter, satış maliyeti
 
-Her iki modül aynı Docker Compose ortamında çalışır. Ötüken'deki tarımsal hareketler (satın alma, satış, işçilik maliyeti) otomatik olarak Umay'a muhasebe kaydı olarak düşer.
+Her iki modül aynı Docker Compose ortamında çalışır. Ötüken'deki tarımsal hareketler (satın alma, satış, işçilik maliyeti) otomatik olarak Umay'a muhasebe kaydı olarak düşer. Verileriniz tamamen sizin kontrolünüzde, internete ihtiyaç duymadan çalışır.
 
 ### ✨ Özellikler
 
@@ -193,12 +193,12 @@ docker compose down                                  # Durdur (veriler korunur)
 
 ### What is Ergenekon?
 
-**Ergenekon** is an integrated self-hosted platform consisting of two complementary modules:
+**Ergenekon** is a self-hosted integrated platform for personal & family budget management and agricultural operation cost tracking. It consists of two complementary modules:
 
-- 🏦 **Umay** — Financial management: income/expense, bank accounts, credit cards, reporting, asset tracking
-- 🌾 **Ötüken** — Farm & operations management: irrigation, fertilization, harvest, inventory, sales, cost tracking
+- 🏦 **Umay** — Personal & family finances: income/expense, bank accounts, credit cards, asset tracking, reports
+- 🌾 **Ötüken** — Farm operation & cost calculation: irrigation, fertilization, harvest, inventory, sales cost
 
-Both modules run in the same Docker Compose environment. Agricultural transactions in Ötüken (purchases, sales, labour costs) are automatically posted as accounting entries in Umay.
+Both modules run in the same Docker Compose environment. Agricultural transactions in Ötüken (purchases, sales, labour costs) are automatically posted as accounting entries in Umay. Your data stays on your own server — no internet required.
 
 ### ✨ Features
 
@@ -337,13 +337,13 @@ Her yeni sürüm [GitHub Releases](https://github.com/signorali/ergenekon/releas
 
 ## 📝 Lisans / License
 
-Umay, bireysel ve küçük işletme kullanımı için **ücretsiz (Community)** olarak sunulmaktadır.  
-*Umay is **free (Community edition)** for individual and small business use.*
+Ergenekon, kişisel ve aile kullanımı için **ücretsiz (Community)** olarak sunulmaktadır.  
+*Ergenekon is **free (Community edition)** for personal and family use.*
 
 | Sürüm / Edition | Kapsam / Scope | Lisans / License |
 |-----------------|----------------|------------------|
-| Community | Bireysel, KOBİ / Individual, SMB | Ücretsiz / Free |
-| Enterprise | Ötüken entegrasyonu, çoklu şube / Ötüken integration, multi-branch | Ticari / Commercial |
+| Community | Kişisel, aile bütçesi / Personal, family budget | Ücretsiz / Free |
+| Enterprise | Ötüken modülü, çoklu kullanıcı / Ötüken module, multi-user | Ticari / Commercial |
 
 ### 📬 İletişim / Contact
 
