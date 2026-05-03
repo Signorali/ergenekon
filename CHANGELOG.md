@@ -7,6 +7,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.4.1] - 2026-05-03
+
+### Düzeltildi / Fixed
+- **Eski Kredi**: anapara yazılınca masraf otomatik olarak anaparayla eşit oluyordu (form.disbursed_amount alanı gizli olduğu için 0 sayılıp `fees = principal - 0` hesaplanıyordu). Artık eski kredide masraf hep 0
+- **Aynı bankadan ikinci kredi**: backend `lender_name + group_id` ikilisini benzersiz sayıyordu — aynı bankadan farklı amaçlı 2. kredi açılamıyordu. Artık kontrol `lender_name + loan_purpose + group_id` üçlüsünde — aynı bankadan farklı amaçlı krediler açılabilir
+- **Umay → Ötüken çiftlik/stok dropdown'ları**: Plain `fetch()` çağrıları Authorization header göndermiyor, sadece Ötüken cookie'sine (1 saat TTL) bağımlıydılar. Cookie expire olunca dropdown'lar boş kalıyordu (özellikle Demirbaş, Tohum, DSI gibi Arazi kategorilerinde). Yeni `otukenFetch` helper'ı Umay JWT'sini Bearer header olarak otomatik ekliyor — cookie state'inden bağımsız çalışıyor
+
+### Eklendi / Added
+- `umay/frontend/src/lib/otukenFetch.ts` — Ötüken API'sine yapılan tüm fetch çağrıları için ortak yardımcı (Authorization header otomatik eklenir)
+
+---
+
 ## [3.4.0] - 2026-05-03
 
 ### Eklendi / Added
