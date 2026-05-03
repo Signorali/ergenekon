@@ -7,6 +7,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.4.2] - 2026-05-03
+
+### Düzeltildi / Fixed
+- **KRİTİK: "Şimdi Güncelle" Compose stack'i parçalıyordu.** Backend, container'ları yeniden oluştururken Docker Compose label'larını (`com.docker.compose.project`, `com.docker.compose.service` vb.) yeni container'a aktarmıyordu. Sonuç: Container Station label'sız container'ları "ayrı stack" sayıp kendiliğinden yeni bir `entegresistem` veya benzeri stack uyduruyordu — orijinal `ergenekon` stack'inden 4 container eksiliyor, yeni stack'te aynı 4 container farklı ağda görünüyordu (umay-backend → DB'ye ulaşamayıp "Others" durumunda kalıyordu)
+- Hem `_recreate_container` (frontend/Ötüken için) hem de `_schedule_backend_recreate` sidecar (backend self-update için) artık tüm container label'larını koruyor
+
+### Etki
+Bu fix QNAP Container Station ve diğer compose-aware orchestrator'larda kritik. Düzeltme öncesi "Şimdi Güncelle" basıldığında stack fragmente oluyor ve sistem çalışmaz hale geliyordu.
+
+---
+
 ## [3.4.1] - 2026-05-03
 
 ### Düzeltildi / Fixed
