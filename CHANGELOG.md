@@ -7,6 +7,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.4.0] - 2026-05-03
+
+### Eklendi / Added
+- **Ötüken Alış / Gider:** Stok kartı seçimi artık opsiyonel — stoksuz gider satırları (yakıt, işçilik, internet vb.) doğrudan açıklama + tutar ile kaydedilebilir
+- **Ötüken Alış formu:** İki modlu satır — "📦 Stoklu Alış" ve "💸 Stoksuz Gider" arasında geçiş
+- **Umay Kredi Kartı (Peşin Alışveriş):** Arazi kategorilerinde "Stok hareketi de oluştur" toggle'ı; varsayılan kapalı, opt-in
+- **Umay İşlemler:** Aynı opt-in toggle Arazi gelir/gider işlemlerinde de aktif
+- **Umay Eski Kredi UX:** "Eski Kredi" işaretlenince gereksiz alanlar (hesap, net tutar, masraf) gizlenir; bilgilendirme kutusu eklendi
+- Backend `LoanCreate` schema: `disbursed_amount` eski kredide opsiyonel, principal'a fallback yapar
+
+### Düzeltildi / Fixed
+- **Ötüken → Umay senkronizasyon:** Frontend'de `create_finance_event=false` hardcoded'du; artık `true` — Ötüken'de yapılan satın almalar Umay'a gider olarak otomatik yansıyor
+- Eski kredilerde `fees` zorla 0'a çekilir (yanlışlıkla gönderilse bile) — backend'de masraf gideri oluşturulmuyor
+
+### Değişti / Changed
+- `PurchaseLine.inventory_item_id` artık nullable (DB migration `0022`)
+- Yeni kolon: `purchase_lines.description` (stoksuz gider açıklaması)
+- CHECK constraint: bir satırda ya stok kartı ya açıklama olmalı
+
+---
+
 ## [3.3.1] - 2026-05-03
 
 ### Eklendi / Added
