@@ -2,16 +2,16 @@
 
 <img src="docs/assets/logo.png" width="120" alt="Umay Logo"/>
 
-# Umay
+# Ergenekon Entegre Sistemi
 
-**Küçük ve orta ölçekli işletmeler için açık kaynaklı finansal yönetim sistemi**
+**Umay** · Finansal Yönetim &nbsp;|&nbsp; **Ötüken** · Arazi & Operasyon Yönetimi
 
-*Open-source financial management system for small and medium businesses*
+*Self-hosted, integrated farm & business management platform*
 
 [![Docker Hub](https://img.shields.io/docker/v/signorali/umay-backend?label=Docker%20Hub&logo=docker&color=2496ED)](https://hub.docker.com/r/signorali/umay-backend)
 [![Docker Pulls](https://img.shields.io/docker/pulls/signorali/umay-backend?logo=docker&color=2496ED)](https://hub.docker.com/r/signorali/umay-backend)
 [![GitHub Release](https://img.shields.io/github/v/release/signorali/ergenekon?logo=github)](https://github.com/signorali/ergenekon/releases)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![License](https://img.shields.io/badge/license-Community%20%2F%20Enterprise-green)](#-lisans--license)
 
 [🇹🇷 Türkçe](#-türkçe) · [🇬🇧 English](#-english) · [📸 Ekran Görüntüleri](#-ekran-görüntüleri--screenshots) · [🚀 Hızlı Kurulum](#-hızlı-kurulum--quick-install)
 
@@ -21,15 +21,27 @@
 
 ## 📸 Ekran Görüntüleri / Screenshots
 
+### 💰 Umay — Finansal Yönetim / Financial Management
+
 <div align="center">
 <table>
 <tr>
-<td align="center"><img src="docs/assets/screenshots/dashboard.png" width="380" alt="Dashboard"/><br/><sub>Ana Sayfa / Dashboard</sub></td>
-<td align="center"><img src="docs/assets/screenshots/transactions.png" width="380" alt="İşlemler"/><br/><sub>İşlemler / Transactions</sub></td>
+<td align="center"><img src="docs/assets/screenshots/umay-dashboard.png" width="380" alt="Umay Dashboard"/><br/><sub>Ana Sayfa / Dashboard</sub></td>
+<td align="center"><img src="docs/assets/screenshots/umay-transactions.png" width="380" alt="İşlemler"/><br/><sub>İşlemler / Transactions</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/assets/screenshots/reports.png" width="380" alt="Raporlar"/><br/><sub>Raporlar / Reports</sub></td>
-<td align="center"><img src="docs/assets/screenshots/setup.png" width="380" alt="Kurulum"/><br/><sub>Kurulum Sihirbazı / Setup Wizard</sub></td>
+<td align="center"><img src="docs/assets/screenshots/umay-reports.png" width="380" alt="Raporlar"/><br/><sub>Raporlar / Reports</sub></td>
+</tr>
+</table>
+</div>
+
+### 🌾 Ötüken — Arazi & Operasyon Yönetimi / Farm & Operations Management
+
+<div align="center">
+<table>
+<tr>
+<td align="center"><img src="docs/assets/screenshots/otuken-operations.png" width="380" alt="Operasyon"/><br/><sub>Operasyon Takibi / Operations</sub></td>
+<td align="center"><img src="docs/assets/screenshots/otuken-sales.png" width="380" alt="Satış"/><br/><sub>Hasat Satışları / Harvest Sales</sub></td>
 </tr>
 </table>
 </div>
@@ -46,11 +58,18 @@ curl -fsSL https://get.umay.app/install | sudo bash
 
 ## 🇹🇷 Türkçe
 
-### Umay Nedir?
+### Sistem Nedir?
 
-Umay, tarım ve küçük-orta ölçekli işletmeler için tasarlanmış, kendi sunucunuzda çalışan açık kaynaklı bir finansal yönetim sistemidir. Tek komutla kurulur, internet bağlantısı olmadan çalışır, verileriniz tamamen sizin kontrolünüzdedir.
+**Ergenekon Entegre Sistemi**, iki birbirini tamamlayan modülden oluşur:
+
+- 🏦 **Umay** — Finansal yönetim: gelir/gider, banka hesapları, kredi kartları, raporlar, varlık takibi
+- 🌾 **Ötüken** — Arazi & operasyon yönetimi: sulama, gübreleme, hasat, envanter, satış, maliyet takibi
+
+Her iki modül aynı Docker Compose ortamında çalışır. Ötüken'deki tarımsal hareketler (satın alma, satış, işçilik maliyeti) otomatik olarak Umay'a muhasebe kaydı olarak düşer.
 
 ### ✨ Özellikler
+
+#### 💰 Umay — Finansal Yönetim
 
 | Özellik | Açıklama |
 |---------|----------|
@@ -58,11 +77,22 @@ Umay, tarım ve küçük-orta ölçekli işletmeler için tasarlanmış, kendi s
 | 🏦 Çoklu Banka Hesabı | Birden fazla hesabı tek ekrandan yönetin |
 | 💳 Kredi Kartı Yönetimi | Ekstre takibi ve kapanma bildirimleri |
 | 📊 Raporlama | Dönemsel raporlar, grafikler ve analiz |
+| 🏠 Varlık Takibi | Araç, ekipman, gayrimenkul portföyü |
 | 👥 Çoklu Kullanıcı | Rol tabanlı erişim yönetimi |
-| 🌾 Ötüken Entegrasyonu | Tarımsal operasyonlarla finansal senkronizasyon *(Enterprise)* |
 | 🔄 Otomatik Güncelleme | Tek tıkla sistem güncellemesi |
 | 🔐 Güvenli | HTTPS, JWT, rate limiting, brute-force koruması |
 | 📱 Tablet Uygulaması | Android tablet desteği |
+
+#### 🌾 Ötüken — Arazi & Operasyon Yönetimi *(Enterprise)*
+
+| Özellik | Açıklama |
+|---------|----------|
+| 🚜 Operasyon Takibi | Sulama, gübreleme, ilaçlama, hasat kayıtları |
+| 📦 Envanter & Demirbaş | Stok ve ekipman yönetimi |
+| 🌍 Arazi Yönetimi | Parsel bazlı operasyon ve maliyet takibi |
+| 🛒 Alış / Satış | Hasat satışları ve karlılık görünümü |
+| 💧 DSI Sulama Kartı | Sulama abonman bakiyesi ve işlem geçmişi |
+| 🔗 Umay Entegrasyonu | Tüm maliyetler otomatik muhasebe kaydına düşer |
 
 ### 📋 Gereksinimler
 
@@ -161,11 +191,18 @@ docker compose down                                  # Durdur (veriler korunur)
 
 ## 🇬🇧 English
 
-### What is Umay?
+### What is Ergenekon?
 
-Umay is an open-source financial management system designed for agricultural and small-to-medium businesses, running entirely on your own server. Installed with a single command, works without internet connection, your data stays completely under your control.
+**Ergenekon** is an integrated self-hosted platform consisting of two complementary modules:
+
+- 🏦 **Umay** — Financial management: income/expense, bank accounts, credit cards, reporting, asset tracking
+- 🌾 **Ötüken** — Farm & operations management: irrigation, fertilization, harvest, inventory, sales, cost tracking
+
+Both modules run in the same Docker Compose environment. Agricultural transactions in Ötüken (purchases, sales, labour costs) are automatically posted as accounting entries in Umay.
 
 ### ✨ Features
+
+#### 💰 Umay — Financial Management
 
 | Feature | Description |
 |---------|-------------|
@@ -173,11 +210,22 @@ Umay is an open-source financial management system designed for agricultural and
 | 🏦 Multiple Bank Accounts | Manage multiple accounts from one screen |
 | 💳 Credit Card Management | Statement tracking and closing notifications |
 | 📊 Reporting | Periodic reports, charts and analysis |
+| 🏠 Asset Tracking | Vehicles, equipment, real estate portfolio |
 | 👥 Multi-user | Role-based access management |
-| 🌾 Ötüken Integration | Agricultural operations financial sync *(Enterprise)* |
 | 🔄 Auto-update | One-click system update |
 | 🔐 Secure | HTTPS, JWT, rate limiting, brute-force protection |
 | 📱 Tablet App | Android tablet support |
+
+#### 🌾 Ötüken — Farm & Operations Management *(Enterprise)*
+
+| Feature | Description |
+|---------|-------------|
+| 🚜 Operation Tracking | Irrigation, fertilization, spraying, harvest records |
+| 📦 Inventory & Assets | Stock and equipment management |
+| 🌍 Land Management | Plot-based operations and cost tracking |
+| 🛒 Purchase / Sales | Harvest sales and profitability view |
+| 💧 DSI Irrigation Card | Irrigation subscription balance and history |
+| 🔗 Umay Integration | All costs automatically posted to accounting |
 
 ### 📋 Requirements
 
