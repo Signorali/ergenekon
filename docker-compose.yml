@@ -1,0 +1,447 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # =====================
+  # Shared Infrastructure
+  # =====================
+
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: ergenekon-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-ergenekon}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_INITDB_ARGS: "-c shared_buffers=256MB -c effective_cache_size=1GB -c maintenance_work_mem=64MB -c checkpoint_completion_target=0.9 -c wal_buffers=16MB -c default_statistics_target=100 -c random_page_cost=1.1 -c effective_io_concurrency=200 -c work_mem=4MB -c min_wal_size=1GB -c max_wal_size=4GB"
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "default_statistics_target=100"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      - "-c"
+      - "work_mem=4MB"
+      - "-c"
+      - "min_wal_size=1GB"
+      - "-c"
+      - "max_wal_size=4GB"
+      - "-c"
+      - "wal_keep_size=512MB"
+      - "-c"
+      - "max_connections=300"
+    volumes:
+      - ergenekon_pgdata:/var/lib/postgresql/data
+      - ergenekon_backups:/var/lib/postgresql/backups
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-ergenekon}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  redis:
+    image: redis:7-alpine
+    container_name: ergenekon-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --auto-aof-rewrite-percentage 100
+      --auto-aof-rewrite-min-size 64mb
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --tcp-backlog 511
+      --timeout 0
+      --tcp-keepalive 300
+      --databases 16
+      --requirepass ${REDIS_PASSWORD:-changeme}
+    volumes:
+      - ergenekon_redis_data:/data
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # =====================
+  # HTTPS Sertifika Üretimi
+  # (Sadece ilk çalıştırmada — sertifikalar yoksa üretir, varsa atlar)
+  # =====================
+
+  cert-init:
+    image: alpine:3.19
+    container_name: ergenekon-cert-init
+    volumes:
+      - ./nginx/certs:/certs
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache openssl > /dev/null 2>&1
+        if [ -f /certs/server.crt ]; then
+          echo "[cert-init] Sertifikalar zaten mevcut, atlaniyor."
+          exit 0
+        fi
+        echo "[cert-init] Sertifikalar uretiliyor (ilk kurulum)..."
+        openssl genrsa -out /certs/ca.key 4096 2>/dev/null
+        openssl req -new -x509 -days 3650 \
+          -key /certs/ca.key \
+          -out /certs/ca.crt \
+          -subj "/CN=Ergenekon Local CA/O=Ergenekon/C=TR"
+        openssl genrsa -out /certs/server.key 2048 2>/dev/null
+        openssl req -new \
+          -key /certs/server.key \
+          -out /certs/server.csr \
+          -subj "/CN=localhost/O=Ergenekon/C=TR"
+        printf "subjectAltName=DNS:localhost,IP:127.0.0.1,IP:10.0.2.2,IP:192.168.2.43,IP:192.168.2.64,IP:100.70.61.106\nextendedKeyUsage=serverAuth\n" > /tmp/san.ext
+        openssl x509 -req -days 3650 \
+          -in /certs/server.csr \
+          -CA /certs/ca.crt -CAkey /certs/ca.key -CAcreateserial \
+          -out /certs/server.crt \
+          -extfile /tmp/san.ext
+        chmod 644 /certs/ca.crt /certs/server.crt
+        chmod 600 /certs/ca.key /certs/server.key
+        echo "[cert-init] Sertifikalar hazir!"
+        echo "[cert-init] CA dosyasi: nginx/certs/ca.crt"
+        echo "[cert-init] Bu dosyayi isletim sisteminize guvenen CA olarak ekleyin."
+    restart: "no"
+    networks:
+      - ergenekon_net
+
+  # =====================
+  # HTTPS Proxy (nginx)
+  # =====================
+
+  ergenekon-proxy:
+    image: nginx:1.27-alpine
+    container_name: ergenekon-proxy
+    restart: unless-stopped
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
+      umay-frontend:
+        condition: service_started
+      umay-backend:
+        condition: service_started
+      otuken-frontend:
+        condition: service_started
+      otuken-backend:
+        condition: service_started
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    ports:
+      - "${PROXY_HTTP_PORT:-80}:80"
+      - "${PROXY_HTTPS_PORT:-443}:443"
+      - "${PROXY_OTUKEN_PORT:-4443}:4443"
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+  # =====================
+  # Umay Services
+  # =====================
+
+  umay-backend:
+    build:
+      context: ./umay/backend
+      dockerfile: Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-3.3.1}
+    container_name: umay-backend
+    restart: unless-stopped
+    env_file:
+      - .env.umay
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: umay
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    volumes:
+      - umay_backend_storage:/app/storage
+      - umay_backend_backups:/app/backups
+      # Docker socket: tek-tık Docker Hub güncellemesi için zorunlu.
+      # Backend, /updates/trigger çağrısında Docker daemon ile konuşup
+      # signorali/umay-{backend,frontend}:latest imajlarını çeker ve
+      # container'ları yeniden oluşturur. ro yeterli değil — pull/create
+      # işlemleri yazma da gerektirdiği için rw olmalı.
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "127.0.0.1:${UMAY_BACKEND_PORT:-1923}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+  umay-frontend:
+    build:
+      context: ./umay/frontend
+      dockerfile: Dockerfile.prod
+    container_name: umay-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${UMAY_FRONTEND_PORT:-1881}:80"
+    depends_on:
+      - umay-backend
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+  umay-worker:
+    build:
+      context: ./umay/backend
+      dockerfile: Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-3.3.1}
+    container_name: umay-worker
+    restart: unless-stopped
+    command: ["arq", "app.worker.WorkerSettings"]
+    env_file:
+      - .env.umay
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: umay
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    volumes:
+      - umay_backend_storage:/app/storage
+      - umay_backend_backups:/app/backups
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+  # =====================
+  # Ötüken Services
+  # =====================
+
+  otuken-backend:
+    build:
+      context: ./otuken
+      dockerfile: Dockerfile
+    container_name: otuken-backend
+    restart: unless-stopped
+    env_file:
+      - .env.otuken
+    environment:
+      APP_NAME: Ötüken Arazi Modülü
+      ENVIRONMENT: production
+      POSTGRES_HOST: db
+      POSTGRES_DB: umay
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      DATABASE_URL: postgresql+psycopg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/umay
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      UMAY_BASE_URL: http://umay-backend:8000
+      CORS_ALLOW_ORIGINS: >-
+        https://localhost,
+        https://localhost:${PROXY_OTUKEN_PORT:-4443}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set in .env}
+    ports:
+      - "127.0.0.1:${OTUKEN_BACKEND_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      umay-backend:
+        condition: service_started
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+  otuken-frontend:
+    build:
+      context: ./otuken/frontend
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_API_BASE_URL: ""
+        VITE_INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set in .env}
+        VITE_CONTACT_WHATSAPP: ${CONTACT_WHATSAPP:-}
+        VITE_CONTACT_EMAIL: ${CONTACT_EMAIL:-}
+        APP_VERSION: ${APP_VERSION:-3.3.1}
+    container_name: otuken-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${OTUKEN_FRONTEND_PORT:-5174}:80"
+    depends_on:
+      - otuken-backend
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+  # ─── Network Watchdog ────────────────────────────────────────────────────
+  # Container Station / Portainer / herhangi bir UI bridge ağı eklerken
+  # iç ağı kaldırırsa, bu servis 10sn içinde otomatik geri bağlar.
+  # Sayesinde kullanıcı istediği gibi ekstra ağ ekleyebilir.
+  ergenekon-watchdog:
+    image: docker:27-cli
+    container_name: ergenekon-watchdog
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./scripts/network-watchdog.sh:/watchdog.sh:ro
+    environment:
+      NETWORK_NAME: entegresistem_ergenekon_net
+      INTERVAL: "10"
+    entrypoint: ["sh", "/watchdog.sh"]
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+    depends_on:
+      - ergenekon-proxy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+
+  # =====================
+  # Uptime / Monitoring (Uptime-Kuma)
+  # =====================
+  # Tüm servislerin /health endpoint'lerini izler; offline olan servis için
+  # email / Slack / Telegram / WhatsApp / Discord bildirimi atar.
+  # İlk açılışta http://localhost:3001 → admin hesabı kur → monitor ekle.
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: ergenekon-uptime-kuma
+    restart: unless-stopped
+    volumes:
+      - uptime_kuma_data:/app/data
+    ports:
+      # Sadece localhost'a bind — dışarı nginx ile sunulur (/uptime/ path'i)
+      - "127.0.0.1:${UPTIME_KUMA_PORT:-3001}:3001"
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  otuken-sync-worker:
+    build:
+      context: ./otuken
+      dockerfile: Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-3.3.1}
+    container_name: otuken-sync-worker
+    restart: unless-stopped
+    command:
+      [
+        "python",
+        "/app/scripts/sync_queue_worker.py",
+        "--base-url",
+        "http://otuken-backend:8080",
+        "--api-key",
+        "${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set in .env}",
+        "--batch-limit",
+        "100",
+        "--interval-seconds",
+        "30"
+      ]
+    env_file:
+      - .env.otuken
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: umay
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      DATABASE_URL: postgresql+psycopg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/umay
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      umay-backend:
+        condition: service_started
+      otuken-backend:
+        condition: service_started
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
+networks:
+  ergenekon_net:
+    driver: bridge
+
+volumes:
+  ergenekon_pgdata:
+    driver: local
+  ergenekon_backups:
+    driver: local
+  ergenekon_redis_data:
+    driver: local
+  umay_backend_storage:
+    driver: local
+  umay_backend_backups:
+    driver: local
+  uptime_kuma_data:
+    driver: local
