@@ -115,6 +115,10 @@ services:
   cert-init:
     image: alpine:3.19
     container_name: ergenekon-cert-init
+    # network_mode: host — konteynerin host agina erisip ip addr ile gercek
+    # LAN IP'lerini tespit etmesini saglar. Windows Docker Desktop'ta desteklenmez
+    # (sadece localhost uretilir), Linux'ta tam calisir.
+    network_mode: host
     volumes:
       - ./nginx/certs:/certs
     command:
@@ -127,6 +131,14 @@ services:
           exit 0
         fi
         echo "[cert-init] Sertifikalar uretiliyor (ilk kurulum)..."
+        SAN="DNS:localhost,IP:127.0.0.1"
+        for IP in $(ip -4 addr show 2>/dev/null | grep -oE 'inet [0-9.]+' | awk '{print $2}'); do
+          case "$IP" in
+            127.*|172.1[6-9].*|172.2[0-9].*|172.3[0-1].*|169.254.*) continue ;;
+            *) SAN="${SAN},IP:${IP}" ;;
+          esac
+        done
+        echo "[cert-init] Kapsanan IP'ler: $SAN"
         openssl genrsa -out /certs/ca.key 4096 2>/dev/null
         openssl req -new -x509 -days 3650 \
           -key /certs/ca.key \
@@ -137,7 +149,7 @@ services:
           -key /certs/server.key \
           -out /certs/server.csr \
           -subj "/CN=localhost/O=Ergenekon/C=TR"
-        printf "subjectAltName=DNS:localhost,IP:127.0.0.1,IP:10.0.2.2,IP:192.168.2.43,IP:192.168.2.64,IP:100.70.61.106\nextendedKeyUsage=serverAuth\n" > /tmp/san.ext
+        printf "subjectAltName=${SAN}\nextendedKeyUsage=serverAuth\n" > /tmp/san.ext
         openssl x509 -req -days 3650 \
           -in /certs/server.csr \
           -CA /certs/ca.crt -CAkey /certs/ca.key -CAcreateserial \
@@ -149,8 +161,6 @@ services:
         echo "[cert-init] CA dosyasi: nginx/certs/ca.crt"
         echo "[cert-init] Bu dosyayi isletim sisteminize guvenen CA olarak ekleyin."
     restart: "no"
-    networks:
-      - ergenekon_net
 
   # =====================
   # HTTPS Proxy (nginx)
