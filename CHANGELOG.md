@@ -17,6 +17,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
   refresh_token da güncelleniyor.
 - **İşlemler — boş açıklama**: Açıklama alanı boş olan işlemlerde kategori adı italik
   olarak gösterilir (masaüstü + mobil). Arama filtresi de kategori adına göre çalışır.
+- **Dashboard grup kapsamı (Hesap Bakiyeleri + Yaklaşan Ödemeler)**: Grup üyeliği olan
+  kullanıcılar, kendi grubuna atanmamış (group_id=NULL) hesapları ve planlı ödemeleri
+  dashboard'da görüyordu. İki katmanlı düzeltme:
+  (1) `accounts.py` — `is_user_group` bayrağı artık NULL-group hesapları yalnızca hiç
+  grup üyeliği olmayan kullanıcılara True döndürür; grup üyeliği olanlara False.
+  (2) `report_service.py` `cash_flow_projection` — v3.4.16'da eklenen OR-NULL filtresi
+  kaldırıldı; artık kullanıcının kendi grup ödemeleri gösterilir, NULL-group kayıtlar sızıntı yapmaz.
+- **Dashboard widget izinleri**: Her widget için modül/eylem izin kontrolü eklendi
+  (`WIDGET_PERMISSION` haritası). İzinsiz kullanıcılar widget'ı göremez ve backend'e
+  gereksiz istek gönderilmez.
+- **Güvenlik bildirimi**: Hatalı giriş denemeleri sonrası kullanıcı ilk oturum açtığında
+  ekrana bildirim geliyordu ancak hiç görünmüyordu. `failed_login_count` sayacı exception
+  sırasında rollback ile kayboluyordu; `except UnauthorizedError:` bloğuna explicit
+  `session.commit()` eklenerek sayaç DB'ye yazılır hale getirildi.
+- **Ödeme Aracı dropdown gruplaması**: İşlemler sayfasında "Ödeme Aracı" seçici artık
+  hesapları sahibe (Ali, Aysel, Ev vb.) göre gruplandırarak `<optgroup>` ile gösterir.
 
 ---
 
