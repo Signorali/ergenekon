@@ -13,6 +13,7 @@ Mobil Uygulama/
 Local/
 Qnap/
 install/docker-compose.qnap.yml
+install-qnap.sh
 
 # ── Sır içeren dosyalar ───────────────────────────────────────────────────────
 .env
