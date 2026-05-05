@@ -7,6 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.5.3] - 2026-05-06
+
+### Fixed
+- **Defter sayfası okunabilirlik**: Sol hesap listesinde metin rengi belirtilmemişti; dark
+  temada hesap adları neredeyse görünmez oluyordu. Her satıra açık `color: var(--text-primary)`
+  eklendi, seçili satır beyaz metin + accent arka plan ile vurgulandı, tür etiketi ve bakiye
+  renkleri seçili/seçilmemiş duruma göre uyarlandı.
+
+---
+
 ## [3.5.2] - 2026-05-05
 
 ### Fixed
