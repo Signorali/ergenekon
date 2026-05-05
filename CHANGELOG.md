@@ -7,6 +7,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.5.2] - 2026-05-05
+
+### Fixed
+- **Oturum otomatik yenileme**: Access token (1 saat) dolduğunda kullanıcı login sayfasına
+  atılıyordu. `umay.ts` 401 interceptor'ına sessiz token refresh eklendi — refresh_token
+  (3 gün) ile yeni access_token alınıp orijinal istek otomatik tekrarlanıyor. Eş zamanlı
+  istekler tek bir refresh için sıraya giriyor, rotation sayesinde her yenilemede yeni
+  refresh_token da güncelleniyor.
+- **İşlemler — boş açıklama**: Açıklama alanı boş olan işlemlerde kategori adı italik
+  olarak gösterilir (masaüstü + mobil). Arama filtresi de kategori adına göre çalışır.
+
+---
+
 ## [3.5.1] - 2026-05-05
 
 ### Fixed
