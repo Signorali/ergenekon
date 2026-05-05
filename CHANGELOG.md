@@ -7,6 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.5.1] - 2026-05-05
+
+### Fixed
+- **Mobil formlar**: Ekstre Öde, Planlı Ödeme, Yeni İşlem ve KK Alışverişi formlarında
+  butonlar alt navigasyon çubuğunun arkasına düşüyor ve görünmüyordu.
+  MobileSheet bileşenine `paddingBottom: calc(60px + safe-area-inset-bottom + 16px)`
+  eklenerek tüm mobil formlarda butonlar erişilebilir hale getirildi.
+
+---
+
 ## [3.5.0] - 2026-05-05
 
 ### Yeni / Added — Tam Mobil Destek
