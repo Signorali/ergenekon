@@ -7,6 +7,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.5.5] - 2026-05-06
+
+### Changed
+- **Dashboard — Planlı Ödemeler Grafiği**: 8 haftalık görünüm 12 haftaya genişletildi.
+  Sayfalama adımı da 12 hafta olarak güncellendi.
+- **Dashboard — Grafik Y ekseni**: Miktar etiketleri `var(--text-tertiary)` yerine
+  `var(--text-secondary)` + `fontWeight:500` ile daha okunabilir hale getirildi.
+  Y ekseni genişliği 40→48px artırıldı.
+
+---
+
 ## [3.5.4] - 2026-05-06
 
 ### Fixed
