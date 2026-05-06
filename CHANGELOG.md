@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.5.4] - 2026-05-06
+
+### Fixed
+- **Versiyon senkronizasyonu**: Umay backend `config.py` (3.4.21), Ötüken backend/frontend
+  (3.3.0) gibi eski versiyon sabit değerleri 3.5.4 ile güncellendi. Tüm bileşenler
+  tek versiyon numarasında birleştirildi.
+
+---
+
 ## [3.5.3] - 2026-05-06
 
 ### Fixed
