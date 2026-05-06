@@ -7,6 +7,99 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.6.0] - 2026-05-06 — Major UX & Feature Update
+
+> Geriye uyumlu yeni özellik sürümü. Hiçbir endpoint kaldırılmadı; eski veriler
+> okunur kalır. Tüm container'lar versiyon tutarlılığı için birlikte yayınlanır.
+
+### Yeni Özellikler
+- **🔐 Banka Şifreleri (yeni sayfa)**: İnternet bankacılığı kullanıcı/şifre kasası.
+  Fernet (AES-128-CBC + HMAC, APP_SECRET_KEY türevli) ile sunucuda şifrelenir,
+  DB'de düz metin tutulmaz. **Grup bazlı**: kayıt sahibi grubun üyesi olan ve
+  `bank_credentials.view/reveal` izni olan kullanıcılar görebilir. "Göster"
+  her tıklamada audit log'a düşer; ekranda 30sn sonra otomatik gizlenir.
+  Yeni izin modülü: `bank_credentials` × {view, reveal, create, update, delete}.
+- **📁 Belgeler grup bazlı görünürlük**: Belge yüklerken grup zorunlu; o grubu
+  görmeye yetkili kullanıcılar listede ve önizleme/indirmede görür.
+- **👁 Belge önizleme**: PDF, görüntü (jpg/png/...), metin (txt/csv/json/xml)
+  inline iframe; Office (docx/xlsx/pptx) için "indirip aç" yönlendirmesi.
+  ⬇ İndir butonu (kullanıcının verdiği başlıkla); başlık alanı yükleme sırasında.
+- **📋 Operasyon detay modalı**: Operasyon listesinde her satıra **Detay** butonu;
+  malzeme/işçilik/kaynak/ekipman satırları + maliyet özeti. Tablolar zebra +
+  hover + sticky-header iyileştirmeleri tüm Ötüken'de.
+- **📜 Reçete entegrasyonu**: "Genel Operasyon Ekle" ekranında reçete dropdown'u;
+  seçilince satırlar otomatik dolar (sabit miktar, alana göre ölçeklenmez).
+  Reçete tanımlarında "Malzemeler (reçete başına sabit)" etiketi.
+- **🔍 Alış / Satış filtreleri**: Tümü / Ay / Yıl / Aralık seçimi; **Birim Fiyat**
+  kolonu (toplam/miktar) eklendi.
+- **📌 Sidebar pin / auto-hide**: Topbar ☰ butonu sidebar'ı sabitler / otomatik
+  gizler. Pin tercihi `localStorage`'da kalıcı; pin aktifken kabartma efekt.
+- **📅 Tarih formatı standardizasyonu**: Tüm sistem (Umay + Ötüken + Mobil)
+  `gün.ay.yıl` (örn. 06.05.2026). Locale-bağımsız `formatDate` helper'ı
+  3 codebase'e eklendi; raw ISO render'lar sarmalandı.
+- **🌍 Sulama dakika girişi**: Saatlik DSI ücreti × dakika hesaplama (kullanıcı
+  dakika girer, otomatik saate çevrilir).
+- **💸 Faiz kategori zorunlu**: Erken/geç ödeme modalında faiz indirimi/cezası
+  girilirse kategori (gelir/gider) zorunlu, gruplu dropdown.
+
+### Düzeltmeler (regression / bug)
+- **Cookie Secure regression**: HTTP üzerinden gelen kullanıcı için cookie
+  artık her isteğin `scheme`'inden türer (`X-Forwarded-Proto` desteği). LAN/
+  mobil HTTP deploy'larında oturum tekrar açılır. (3.5.8 regression)
+- **MFA login TypeError**: `auth_service.py` `verify_totp(code=...)` ↔
+  `mfa_service.verify_totp(totp_code=...)` parametre uyumsuzluğu. Her MFA
+  girişi 500 dönüyordu → kullanıcı sistemden tamamen çıkıyordu. Tek satır
+  fix + savunma katmanı: bilinmedik exception'lar generic 401'e dönüştürülüp
+  log'lansın, kullanıcı kilitlenmesin.
+- **MFA replay UX**: `verify_totp(record_replay_counter=...)` parametresi —
+  disable/regenerate akışları counter set etmez (authenticated context).
+- **Ötüken-Umay cookie bridge**: `umay_token` cookie de Ötüken'de kabul edilir
+  (`_token_from_cookies` helper); `equipment`, `integration`, `teams` route'ları
+  inline cookie okuma yerine helper kullanır → çiftlik bağlantısı kopması
+  giderildi, Bakım modal'ında ödeme akışı çalışıyor.
+- **Yaklaşan Ödemeler widget**: `cash_flow_projection` artık IN [PENDING,
+  OVERDUE, PARTIALLY_PAID]; OVERDUE/PARTIALLY_PAID için tarih penceresi bypass.
+- **Dashboard pasta grafiği**: Aynı isimli "Diğer" kategorileri TEK satırda
+  birleşir; auto-grouped dilim çakışırsa "Çeşitli" adıyla gösterilir.
+- **Planlı ödemeler GRUP**: `payment.group_id` boş ama kategori varsa
+  kategorinin grubu italic ile türetilir.
+- **Krediden çekilen para**: Hedef hesap dropdown'ı kredinin grubu **VE** para
+  birimine göre filtrelenir; faiz indirimi tutarda string concat bug'ı
+  (`Number()` cast); kategori dropdown'ı kredinin grubuna göre filtrelenir.
+- **Reçete ölçekleme**: Reçete miktarı artık alana çarpılmaz, kullanıcının
+  yazdığı sabit miktar (örn. "100 lt karışım için") olduğu gibi düşülür.
+- **Ötüken bakım/operasyon ekranlarında hesap dropdownları gruplu**;
+  `<optgroup>` ile group_name'e göre.
+- **Yeni stok kartı formu Ötüken ile alan eşleşmesi**: Stok Adı, Stok Kodu,
+  Marka/Üretici, **Stok Türü + "Yeni Tür"**, **Not** alanları; etiket isimleri
+  Ötüken UI ile aynı.
+- **Roller sayfası i18n**: `bank_credentials` modülü FİNANSAL İŞLEMLER
+  kategorisi altında; `reveal` aksiyonu çevrildi (TR/EN/DE).
+- **Ekipman türü etiketi**: `equipment.type.DEMIRBAŞ` çevrilmiyordu →
+  i18n + humanize fallback eklendi.
+- **i18n MFA login alanları**: `login.mfa_*` çevirileri (TR/EN/DE).
+
+### Performans / Stabilite
+- DB pool_timeout=5, pool_recycle=1800
+- Redis socket_timeout=2 + health_check_interval=30
+- Login akışında IpBlockService fail-open (Redis hıçkırığı kullanıcı kilitlemesin)
+- LicenseContext refresh hatasında önceki status korunur
+- Dashboard useEffect deps + alive cleanup race fix
+
+### Güvenlik
+- Ötüken auth cache key `sha256(token)` (token[:32] cross-user collision'ı
+  kapatıldı — v3.5.8'de çözülmüştü, bu sürümde de korunur)
+- Cookie `Secure` flag scheme-türevli
+- Bank credential vault audit'li reveal
+
+### Migration
+- `0073_bank_credentials.py` — vault tablosu
+- `0074_bank_credentials_group_scoped.py` — user_id → created_by_user_id, group_id
+- `0075_seed_bank_credentials_permissions.py` — yeni izinleri tüm tenant'lara seed
+- `0076_documents_group_scoped.py` — documents.group_id (idempotent)
+
+---
+
 ## [3.5.12] - 2026-05-06
 
 ### Fixed
