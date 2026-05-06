@@ -329,7 +329,8 @@ services:
       dockerfile: Dockerfile.prod
       args:
         VITE_API_BASE_URL: ""
-        VITE_INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set in .env}
+        # SECURITY: INTERNAL_API_KEY frontend bundle'ına gömülmemeli; build arg
+        # olarak da geçilmiyor (docker history layer leak'i önlemek için).
         VITE_CONTACT_WHATSAPP: ${CONTACT_WHATSAPP:-}
         VITE_CONTACT_EMAIL: ${CONTACT_EMAIL:-}
         APP_VERSION: ${APP_VERSION:-3.3.1}

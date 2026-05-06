@@ -7,6 +7,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.5.8] - 2026-05-06
+
+### Security
+- **Ötüken — kimlik doğrulama cache key collision (KRİTİK)**: `_user_cache` anahtarı
+  `token[:32]` kullanıyordu; tüm JWT'ler aynı 36 karakterlik base64 header ile başladığı
+  için her kullanıcı için aynı cache key üretiliyor, ilk gelen kullanıcının kimliği 60 sn
+  boyunca tüm isteklere atanıyordu (cross-user authentication bypass; tenant izolasyonu
+  ve admin kontrolleri dahil). Cache key `sha256(token)` ile değiştirildi.
+  (`otuken/app/api/deps.py`)
+- **Umay — auth cookie `Secure` flag her zaman kapalı**: `_SECURE = not settings.DEBUG
+  if hasattr(settings, 'DEBUG')` koşulu daima `False` dönüyordu (Pydantic field adı
+  `APP_DEBUG`); production HTTPS dağıtımlarında bile `umay_token` cookie HTTP üzerinden
+  taşınabiliyordu. `settings.APP_ENV != "development"` kontrolüne çevrildi.
+  (`umay/backend/app/api/v1/endpoints/auth.py`)
+- **Ötüken — frontend bundle'da `INTERNAL_API_KEY` sızma riski**: `VITE_INTERNAL_API_KEY`
+  build arg olarak Vite imajına geçiriliyordu; kodda referans yoktu ama `docker history`
+  layer'larında ortaya çıkıyor ve gelecekteki bir `import.meta.env` referansıyla tüm
+  tarayıcılara sızabilirdi. Build arg ve ENV satırları kaldırıldı.
+  (`docker-compose.yml`, `otuken/frontend/Dockerfile.prod`)
+
+### Chore
+- Mobil Telefon `.gitignore` `*.log` desenleri eklendi; commit'lenmiş 8 adet `expo-*.log`
+  dosyası kaldırıldı.
+
+---
+
 ## [3.5.7] - 2026-05-06
 
 ### Improved
