@@ -7,6 +7,44 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.5.9] - 2026-05-06
+
+### Fixed
+- **Yaklaşan Ödemeler — vadesi/planı geçmiş PENDING kayıtlar dashboard widget'ında
+  görünmüyordu**: `cash_flow_projection` filtresi sadece `planned_date <= today + N*30`
+  üst sınırını uyguluyordu; `planned_date` uzak gelecekte ama `due_date` geçmiş olan
+  veya iki tarih de geçmiş overdue kayıtlar widget'a düşmüyordu. Artık `OR due_date <
+  today OR planned_date < today` koşulu ile **tüm overdue PENDING kayıtlar her zaman**
+  yaklaşan ödemeler widget'ında listelenir. (`umay/backend/app/services/report_service.py`)
+- **Dashboard "Tümünü Gör" linki Ayarlar'a yönlendiriyordu**: `/planned-payments` route
+  `licenseFeature` ile korunuyor; lisansta feature yoksa ProtectedRoute kullanıcıyı
+  `/settings?tab=license`'a yolluyordu. Link artık (1) `<a href>` yerine SPA `<Link>`,
+  (2) `hasFeature('planned_payments')` true değilse hiç gösterilmiyor.
+  (`umay/frontend/src/pages/DashboardPage.tsx`)
+- **Lisans bazen kayboluyordu / kullanıcı widget'larını yitiriyordu**: `LicenseContext`
+  her refresh hatasında (5xx, geçici sunucu glitch'i, deploy sırası) yüklü status'u
+  trial fallback'ine düşürüyordu. Artık fallback **yalnızca ilk yüklemede** uygulanır;
+  sonraki başarısız fetch'lerde önceki status korunur. (`umay/frontend/src/context/LicenseContext.tsx`)
+- **Dashboard ilk açılışta boş veri**: `useEffect` boş deps array (`[]`) ile mount'ta
+  yakalanan `canViewTransactions/canViewPlanned/canViewAccounts/user.id` `false/null`
+  olunca tüm dallar `Promise.resolve({data:[]})` döndürüyor, fakat hazır olunca tekrar
+  fetch tetiklenmiyordu. Effect artık `user?.id` boşken çalışmıyor; permissions
+  değiştikçe yeniden fetch ediyor; `alive` cleanup ile unmount race'i önleniyor.
+  (`umay/frontend/src/pages/DashboardPage.tsx`)
+
+### Performance / Stability
+- **Backend takılmaları (kritik)**: Redis client'ta `socket_timeout`/`health_check`
+  yoktu — Redis'te kısa bir hang (RDB save, container restart, network glitch) tüm
+  middleware (rate-limit, idempotency, license, auth) zincirini sonsuz blokluyor ve
+  DB pool'unu tüketiyordu. `socket_timeout=2`, `socket_connect_timeout=2`,
+  `health_check_interval=30`, `retry_on_timeout=True` eklendi.
+  (`umay/backend/app/core/redis_client.py`)
+- **DB pool yığılma**: `pool_timeout` default 30s'di → Redis hang gibi ikincil
+  problemlerde nginx 504 alınana kadar request kuyruklanıyordu. `pool_timeout=5` ve
+  bayat connection için `pool_recycle=1800`. (`umay/backend/app/core/database.py`)
+
+---
+
 ## [3.5.8] - 2026-05-06
 
 ### Security
