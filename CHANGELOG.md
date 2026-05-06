@@ -7,6 +7,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.5.11] - 2026-05-06
+
+### Fixed
+- **Yaklaşan Ödemeler widget'ı OVERDUE ve PARTIALLY_PAID kayıtları göstermiyordu**:
+  `cash_flow_projection` yalnızca `status == PENDING` kayıtları çekiyordu. Sistem
+  vadesi geçen ödemeleri cron ile `PENDING → OVERDUE`'ya çeviriyor; bu yüzden 3.5.9'da
+  eklediğim "OR due_date < today" koşulu hiçbir OVERDUE kayda erişemiyordu (status
+  filtresi onları zaten eliyordu). Artık `status IN [PENDING, OVERDUE, PARTIALLY_PAID]`
+  kullanılıyor; ayrıca OVERDUE/PARTIALLY_PAID için tarih pencere kısıtı bypass edilir,
+  uzak vadeli olsalar bile widget'ta gösterilirler. Grup yetki filtresi (`group_id IN
+  user_groups`) korunur — kullanıcı yalnızca yetkili olduğu grupların ödemelerini
+  görür. (`umay/backend/app/services/report_service.py`)
+
+---
+
 ## [3.5.10] - 2026-05-06
 
 ### Fixed
