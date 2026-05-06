@@ -7,6 +7,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.5.6] - 2026-05-05
+
+### Fixed
+- **Raporlar — Kategori Dağılımı grup kapsamı**: İzole grup transferi yeniden sınıflandırma
+  alt sorguları (`iso_q`) `group_ids` filtresini uygulamıyordu; grup üyeliği olan kullanıcılar
+  izole gruba ait transfer tutarlarını kendi kategori raporlarında görebiliyordu.
+  `if group_ids:` dalı eklenerek bu sızıntı giderildi.
+- **Raporlar — Kredi Kartı Raporu**: Servis yanıtı yalnızca toplu istatistik döndürüyordu;
+  frontend'in beklediği `cards` dizisi eksikti. Artık her kart için ad, banka, limit, borç,
+  para birimi ve kullanım oranı döndürülüyor.
+
+---
+
 ## [3.5.5] - 2026-05-06
 
 ### Changed
