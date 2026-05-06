@@ -7,6 +7,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.5.7] - 2026-05-06
+
+### Improved
+- **Transfer açıklama etiketi**: Açıklama girilmemiş Transfer işlemlerinde artık boş
+  ("—" / "TRANSFER") yerine "KaynakHesap → HedefHesap" formatında otomatik etiket gösterilir.
+  İşlem listesi (masaüstü + mobil), arama filtresi ve Dashboard Son İşlemler widget'ı
+  dahil tüm görünümler güncellendi. Dashboard backend'i de hesap adlarını dahil edecek
+  şekilde genişletildi (tek batch sorgusu, N+1 yok).
+
+---
+
 ## [3.5.6] - 2026-05-05
 
 ### Fixed
