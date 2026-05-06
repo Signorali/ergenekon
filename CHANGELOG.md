@@ -7,6 +7,39 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.5.12] - 2026-05-06
+
+### Fixed
+- **Çiftlik bağlantısı kopuk — Umay web → Ötüken çağrıları 401 alıyordu**:
+  Umay frontend `otukenFetch` helper'ı `localStorage.getItem('access_token')`
+  okuyordu, ancak Umay 3.5.x'ten beri cookie-only auth kullanıyor
+  (`AuthContext.login` `_accessToken` parametresini kullanmıyor); localStorage
+  boş kalıyor ve ne Bearer header ne de cookie gönderiliyordu (`fetch` default
+  `same-origin`). Sonuç: çiftlik dropdown'ları, stok listesi, DSI yenileme
+  butonları, KK alımına stok bağlama akışı boş veya 401. **İki katmanlı fix:**
+  1. `otukenFetch` artık `credentials: 'include'` ile httpOnly `umay_token`
+     cookie'sini gönderir.
+  2. Ötüken backend (`otuken/app/api/deps.py`, `otuken/app/modules/auth/routes.py`)
+     `umay_token` cookie'sini de kabul eder (auth zinciri: X-API-Key → Bearer →
+     `otuken_token` → `umay_token`). Önceliklere dokunulmadı; bridge modu
+     (X-API-Key), Tablet/Telefon (Bearer) ve Ötüken doğrudan login (`otuken_token`)
+     hiç etkilenmez.
+  (`umay/frontend/src/lib/otukenFetch.ts`,
+   `otuken/app/api/deps.py`,
+   `otuken/app/modules/auth/routes.py`)
+- **Dashboard "Yaklaşan Ödemeler" widget'ı admin'e boş geliyordu**:
+  `dashboard_service.get_dashboard` admin için bile `_budget_ids = group_ids`
+  set ediyordu; admin'in kişisel grup üyeliklerine filtreleniyor, NULL-group
+  veya admin'in üye olmadığı grup kayıtları widget'tan düşüyordu (`Yaklaşan
+  ödeme yok`). `enforce_group_scope` bayrağı zaten admin'i ayırt ediyordu ama
+  sadece `no_scope` kısa devresinde kullanılıyordu. Artık admin için
+  `_budget_ids = None` → `cash_flow_projection` else dalına girer → sadece
+  izole grupları eler, kalan tüm tenant pending kayıtlarını gösterir. Tenant
+  izolasyonu tenant_id ile zaten korunur. Non-admin davranış aynı (sadece
+  kendi gruplarını görür). (`umay/backend/app/services/dashboard_service.py`)
+
+---
+
 ## [3.5.11] - 2026-05-06
 
 ### Fixed
