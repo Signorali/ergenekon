@@ -7,6 +7,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.5.10] - 2026-05-06
+
+### Fixed
+- **HTTP üzerinden erişim auth tamamen bozuktu (REGRESSION 3.5.8)**: Umay
+  cookie `Secure` flag'i `APP_ENV=production` global ayarına bağlanmıştı; LAN/
+  HTTP üzerinden erişen kullanıcıda cookie tarayıcıya hiç yazılmıyor → tüm
+  istekler 401 → "çiftlik bağlantısı kopuk", market widget boş, sayfa içerikleri
+  boş gibi semptomlar. Cookie Secure flag'i artık **her request'in scheme'ine**
+  göre belirleniyor (`request.url.scheme == "https"` veya `X-Forwarded-Proto:
+  https`). Aynı kod hem HTTPS hem HTTP deploylarda doğru davranır. Aynı düzeltme
+  Ötüken cookie'si için de uygulandı (`otuken/app/modules/auth/routes.py`).
+  (`umay/backend/app/api/v1/endpoints/auth.py`)
+- **Login Redis hang'inde tamamen kilitleniyordu (REGRESSION 3.5.9)**: 3.5.9'da
+  Redis `socket_timeout=2` eklenmişti ama `auth.py`'deki `IpBlockService.is_blocked`
+  çağrısı try/except dışındaydı; Redis'te 2sn'den uzun süren herhangi bir hıçkırık
+  (RDB save, container restart) login'i 500 ile düşürüyordu. Artık `is_blocked`
+  fail-open: Redis hatası login'i bloklamaz, sadece warning loglanır.
+  Hem `/auth/login` hem `/auth/login/mfa` için uygulandı.
+
+---
+
 ## [3.5.9] - 2026-05-06
 
 ### Fixed
