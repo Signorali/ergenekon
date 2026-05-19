@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 # Ergenekon - Docker Hub Publish Script
 
-$VERSION = "3.6.0"
+$VERSION = "3.7.2"
 $HUB_USER = "signorali"
 
 $SERVICES = @{
@@ -12,6 +12,11 @@ $SERVICES = @{
     "entegresistem-otuken-frontend"     = "otuken-frontend"
     "entegresistem-otuken-sync-worker"  = "otuken-sync-worker"
 }
+
+# Özel DB image (PostGIS + pgvector) — 3.7.0'da Umay AI semantik arama için
+# pgvector eklendi. Versiyon "16-3.4" sabit; her sürümde aynı tag kullanılır.
+$DB_LOCAL_IMAGE = "signorali/postgis-pgvector:16-3.4"
+$DB_HUB_IMAGE   = "signorali/postgis-pgvector:16-3.4"
 
 Write-Host ""
 Write-Host "=== Ergenekon Docker Hub Publisher ===" -ForegroundColor Cyan
@@ -38,7 +43,7 @@ foreach ($f in $envFiles) {
 Write-Host ""
 Write-Host "[0.5/4] Rebuilding all images with APP_VERSION=$VERSION..." -ForegroundColor Blue
 $env:APP_VERSION = $VERSION
-docker compose build umay-backend umay-worker umay-frontend otuken-backend otuken-frontend otuken-sync-worker 2>&1 | Select-String -Pattern "Built|ERROR|error" | Select-Object -Last 12
+docker compose build db umay-backend umay-worker umay-frontend otuken-backend otuken-frontend otuken-sync-worker 2>&1 | Select-String -Pattern "Built|ERROR|error" | Select-Object -Last 14
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Build failed." -ForegroundColor Red
     exit 1
@@ -108,9 +113,31 @@ foreach ($local in $SERVICES.Keys) {
     }
 }
 
+# 2.5 Tag DB image
+Write-Host ""
+Write-Host "[2.5/3] Tagging DB image..." -ForegroundColor Blue
+docker tag $DB_LOCAL_IMAGE $DB_HUB_IMAGE 2>&1
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "  Tagged: $DB_LOCAL_IMAGE -> $DB_HUB_IMAGE" -ForegroundColor Green
+} else {
+    Write-Host "  FAILED to tag DB image" -ForegroundColor Red
+    exit 1
+}
+
 # 3. Push
 Write-Host ""
 Write-Host "[3/3] Pushing to Docker Hub..." -ForegroundColor Blue
+
+# 3.0 Push DB image
+Write-Host ""
+Write-Host "  Pushing $DB_HUB_IMAGE..." -ForegroundColor Yellow
+docker push $DB_HUB_IMAGE 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  FAILED: $DB_HUB_IMAGE" -ForegroundColor Red
+    exit 1
+}
+Write-Host "  DONE: $DB_HUB_IMAGE" -ForegroundColor Green
+
 foreach ($local in $SERVICES.Keys) {
     $repo = $SERVICES[$local]
     $hubName = "$HUB_USER/$repo"

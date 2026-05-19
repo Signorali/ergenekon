@@ -12,6 +12,8 @@ Mobil Uygulama/
 # ── Yerel / cihaza özgü yapılandırmalar ──────────────────────────────────────
 Local/
 Qnap/
+YEDEK/
+.claude/
 install/docker-compose.qnap.yml
 install-qnap.sh
 

@@ -7,6 +7,107 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.7.2] - 2026-05-14 — Kredi Kartı Ekstre Tarihi Patch
+
+### Düzeltmeler
+- **Kredi kartı "Ekstre Oluştur" tarih off-by-one**: `statement_day=15` olan
+  bir kartta ekstre dönemi otomatik 16. gün → ertesi ayın 15. günü olarak
+  doluyor olmalıydı, ama Türkiye saatinde 1 gün geri kaydırıyordu (15→14).
+  Sebep: `Date.toISOString()` UTC'ye dönüştürünce yerel 00:00 → bir önceki
+  gün 21:00 oluyordu. Yerel tarih formatlayıcı (`getFullYear/Month/Date`)
+  ile değiştirildi.
+
+---
+
+## [3.7.1] - 2026-05-13 — AI LLM Probe Patch
+
+> Patch sürüm — yalnızca `umay-frontend` etkilendi ama tüm imajlar
+> versiyon tutarlılığı için birlikte yayımlanır.
+
+### Düzeltmeler
+- **AIAskWidget "İstek başarısız" hatası**: Tenant'ta `llm_ask` etkin ama
+  `ergenekon-ai` (Ollama) konteyneri ayakta değilken 🧠 LLM modu seçilebiliyor,
+  her sorgu "İstek başarısız" dönüyordu. Widget artık mount sırasında
+  `/ai/llm/status` probe'u yapar:
+  - LLM ayakta değilse 🧠 LLM butonu devre dışı/silik (`opacity: 0.5`),
+  - Mod otomatik `⚡ Hızlı`'ya zorlanır,
+  - Yanında "LLM servisi kapalı" ipucu görünür,
+  - Tooltip: "Yerel LLM servisi (ergenekon-ai) çalışmıyor".
+
+---
+
+## [3.7.0] - 2026-05-13 — AI Asistanı + UX Düzeltmeleri
+
+> Geriye uyumlu büyük özellik sürümü. Yeni Umay AI Asistanı (Faz 1+2+3),
+> Ötüken arazi tuvali kalıcılık düzeltmesi, sidebar davranış iyileştirmesi.
+> Hiçbir endpoint kaldırılmadı.
+
+### Yeni Özellikler — Umay AI Asistanı (PROFESSIONAL+ lisans)
+- **🤖 Master toggle + per-feature switch'ler** (`Ayarlar → AI Asistanı`):
+  `ai_enabled` kapalıyken hiçbir AI çağrısı yapılmaz, kaynak tüketilmez.
+  Alt özellikler: `auto_categorize`, `anomaly`, `pattern`, `semantic_search`,
+  `llm_ask`. Yeni lisans özelliği: `ai_assistant`.
+- **Faz 1 — Kural tabanlı**: scikit-learn TF-IDF ile kategori önerisi,
+  z-score + MAD ile anomali tespiti, kadans analiziyle tekrarlayan/abonelik
+  tespiti.
+- **Faz 2 — Semantik arama**: pgvector + sentence-transformers
+  (paraphrase-multilingual-MiniLM-L12-v2, 384 boyut). IVFFlat cosine index.
+  Lazy-load model + 30dk boşta unload. `/ai/index/rebuild` ile geri-doldurma.
+- **Faz 3 — Yerel LLM (opsiyonel)**: Ollama 0.4.7 + Qwen 2.5 7B Instruct
+  (Q4_K_M) konteyneri (`ergenekon-ai`). Text-to-SQL pattern:
+  - `ai_views.*` whitelist + `app.current_tenant_id` filtreli tenant-scoped
+    view'lar
+  - SELECT-only validator (forbidden keywords / schema whitelist)
+  - `SET LOCAL app.current_tenant_id` ile her sorgu tenant izolasyonu altında
+- **🧠/⚡ AIAskWidget (Dashboard)**: Doğal dil sorgu — "bu ay kategori X
+  harcamam ne kadar?" Hızlı (kural) ↔ LLM modu arasında geçiş; LLM kapalıysa
+  veya container ayakta değilse otomatik gizlenir.
+- **Veriler dışarı çıkmaz**: Tüm AI işlemleri Docker stack içinde yerel.
+
+### Altyapı
+- **Özel PostGIS+pgvector image** (`signorali/postgis-pgvector:16-3.4`):
+  Ötüken'in coğrafi geometrileri + Umay'ın embedding aramaları aynı veritabanı
+  motorunda. `postgres/Dockerfile` üzerinden build edilir.
+- **Yeni Alembic migration'lar**:
+  - `0078_tenant_ai_settings` — tenant tablosuna `ai_enabled` + `ai_features`
+  - `0079_ai_embeddings` — `transaction_embeddings` tablosu + pgvector IVFFlat
+    cosine index (pgvector yoksa idempotent skip)
+  - `0080_ai_views` — `ai_views` şeması: transactions/categories/accounts/
+    groups/planned_payments view'ları, `current_setting('app.current_tenant_id',
+    true)::uuid` ile filtrelenir.
+- **Backend bağımlılıkları**: scikit-learn 1.5.2, numpy, sentence-transformers
+  3.2.1, torch 2.4.1 (CPU-only wheel index).
+- **Yeni docker-compose servisi**: `ergenekon-ai` (Ollama). Varsayılan
+  `OLLAMA_KEEP_ALIVE=30m`, `OLLAMA_NUM_PARALLEL=1`,
+  `OLLAMA_MAX_LOADED_MODELS=1`.
+
+### Düzeltmeler (regression / bug)
+- **Ötüken arazi tuvali kayıp kayıt**: `PUT /api/v1/geo/land-canvas` her
+  kayıt isteğinde 500 dönüyordu — `sa_text("... :cj::jsonb ...")` ifadesindeki
+  PostgreSQL cast (`::`) SQLAlchemy named-param parser'ı tarafından ikinci
+  parametre olarak yorumlanıyordu. `CAST(:cj AS jsonb)` formuna çevrildi.
+  `/app-settings` PUT için aynı düzeltme uygulandı. Frontend `.catch(() => {})`
+  ile hatayı sessizce yutuyordu → kullanıcı kaydetti zannediyor, sayfa
+  yenilenince default veriler (Arazi 1/2 + örnek ağaçlar) geri geliyordu.
+- **Ötüken görünüm filtreleri kalıcılık**: Arazi sayfası "Görünüm" panelindeki
+  Izgara/Referans Noktaları/Alanlar/Ağaçlar/Yapılar/Su Hatları toggle'ları
+  ve ızgara/hassasiyet ayarları artık `localStorage`'da kalıcı
+  (`otuken.land.view.v1`, `otuken.land.grid.v1`).
+- **Umay sidebar hover-açılma kaldırıldı**: Sidebar artık yalnızca pin
+  durumuna göre açılıp kapanır; mouse ile üzerine gelince istemeden açılmaz.
+  Kapalıyken ikon üzerine gelince native tooltip (`title`) ile menü adı
+  görünür.
+
+### Geriye Uyumluluk
+- Eski tenant kayıtları için `ai_enabled` default `false`, `ai_features` boş.
+  Hiçbir mevcut özellik etkilenmez; AI Ayarları sekmesi sadece PROFESSIONAL+
+  lisansta görünür.
+- AI konteyneri kapalı tutulabilir; tüm Faz 1+2 özellikleri LLM'siz çalışır.
+- Eski `ergenekon/postgis-pgvector:16-3.4` referansları değişti →
+  `signorali/postgis-pgvector:16-3.4`. Mevcut DB volume'u korunur.
+
+---
+
 ## [3.6.0] - 2026-05-06 — Major UX & Feature Update
 
 > Geriye uyumlu yeni özellik sürümü. Hiçbir endpoint kaldırılmadı; eski veriler

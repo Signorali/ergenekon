@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ergenekon — Hızlı Başlangıç Kılavuzu</title>
+<style>
+  /* ── Genel ──────────────────────────────────────────────────────────────── */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #1a1a2e;
+    background: #f5f5f0;
+  }
+
+  /* ── Sayfa düzeni ────────────────────────────────────────────────────────── */
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+    background: #fff;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.12);
+  }
+
+  /* ── Başlık ──────────────────────────────────────────────────────────────── */
+  .header {
+    background: linear-gradient(135deg, #0d1b2a 0%, #1b3a4b 60%, #0d2137 100%);
+    color: #fff;
+    padding: 40px 48px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: rgba(212,184,144,0.08);
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: 30%;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: rgba(212,184,144,0.05);
+  }
+  .header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  .logo-area h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #d4b890;
+  }
+  .logo-area .sub {
+    font-size: 12px;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .version-badge {
+    background: rgba(212,184,144,0.15);
+    border: 1px solid rgba(212,184,144,0.3);
+    color: #d4b890;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+  .header-title {
+    margin-top: 28px;
+  }
+  .header-title h2 {
+    font-size: 20px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.9);
+  }
+  .header-title p {
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+    margin-top: 6px;
+  }
+
+  /* ── İçindekiler ─────────────────────────────────────────────────────────── */
+  .toc {
+    background: #f8f6f1;
+    border-bottom: 1px solid #e8e0d0;
+    padding: 20px 48px;
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+  .toc-item {
+    font-size: 12px;
+    color: #5a6a7a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .toc-item .num {
+    width: 20px; height: 20px;
+    background: #0d1b2a;
+    color: #d4b890;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* ── Ana içerik ──────────────────────────────────────────────────────────── */
+  .content {
+    padding: 0 48px 48px;
+  }
+
+  /* ── Bölüm ───────────────────────────────────────────────────────────────── */
+  .section {
+    margin-top: 36px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e8e0d0;
+  }
+  .section-num {
+    width: 32px; height: 32px;
+    background: #0d1b2a;
+    color: #d4b890;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .section-header h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0d1b2a;
+  }
+  .section-header .hint {
+    font-size: 11px;
+    color: #8a9ab0;
+    font-weight: 400;
+    margin-left: 4px;
+  }
+
+  /* ── Adımlar ─────────────────────────────────────────────────────────────── */
+  .steps {
+    counter-reset: step;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    position: relative;
+  }
+  .steps li::before {
+    content: counter(step);
+    width: 24px; height: 24px;
+    background: #1b3a4b;
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .steps li .label {
+    font-weight: 600;
+    color: #0d1b2a;
+    font-size: 13px;
+  }
+  .steps li .desc {
+    font-size: 12px;
+    color: #5a6a7a;
+    margin-top: 2px;
+  }
+
+  /* ── Kod blokları ────────────────────────────────────────────────────────── */
+  code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    background: #1a1a2e;
+    color: #a8d8a8;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  .code-block {
+    background: #1a1a2e;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 10px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .code-block::before {
+    content: attr(data-label);
+    position: absolute;
+    top: 8px; right: 12px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.25);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: 'Consolas', monospace;
+  }
+  .code-block pre {
+    color: #a8d8a8;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    white-space: pre;
+  }
+  .code-block pre .comment { color: rgba(255,255,255,0.3); }
+  .code-block pre .cmd     { color: #79c0ff; }
+  .code-block pre .path    { color: #ffa657; }
+  .code-block pre .url     { color: #d4b890; font-weight: 600; }
+
+  /* ── Platform kutuları ───────────────────────────────────────────────────── */
+  .platform-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 12px;
+  }
+  .platform-box {
+    border-radius: 10px;
+    padding: 16px 18px;
+    border: 1px solid;
+  }
+  .platform-box.windows {
+    background: #f0f4ff;
+    border-color: #c0cfe8;
+  }
+  .platform-box.linux {
+    background: #f0fff4;
+    border-color: #b0dfc0;
+  }
+  .platform-box .platform-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .platform-box.windows .platform-title { color: #1a4494; }
+  .platform-box.linux   .platform-title { color: #1a6640; }
+  .platform-box ol {
+    padding-left: 16px;
+    font-size: 12px;
+    color: #2a3a4a;
+    line-height: 1.8;
+  }
+
+  /* ── URL tablosu ─────────────────────────────────────────────────────────── */
+  .url-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+  .url-table th {
+    background: #0d1b2a;
+    color: #d4b890;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .url-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+  }
+  .url-table tr:last-child td { border-bottom: none; }
+  .url-table tr:nth-child(even) td { background: #f8f6f1; }
+  .url-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .url-badge.umay    { background: #e8f0fe; color: #1a56c4; }
+  .url-badge.otuken  { background: #e8f8ec; color: #1a6640; }
+  .url-badge.api     { background: #fff3e0; color: #b36200; }
+
+  /* ── Bilgi / Uyarı kutuları ──────────────────────────────────────────────── */
+  .info-box {
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 12px 0;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .info-box .icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .info-box.tip  { background: #f0f8ff; border: 1px solid #c0ddf8; color: #1a4070; }
+  .info-box.warn { background: #fffbf0; border: 1px solid #f0d080; color: #604010; }
+  .info-box.ok   { background: #f0fff4; border: 1px solid #a0dbb0; color: #1a5030; }
+
+  /* ── Günlük kullanım tablosu ─────────────────────────────────────────────── */
+  .cmd-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+  .cmd-table th {
+    background: #f0f4f8;
+    color: #3a4a5a;
+    padding: 8px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    border-bottom: 2px solid #d8e4f0;
+  }
+  .cmd-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #eef2f8;
+  }
+  .cmd-table tr:last-child td { border-bottom: none; }
+  .cmd-table td:first-child { font-weight: 500; color: #2a3a4a; }
+
+  /* ── Sorun giderme ───────────────────────────────────────────────────────── */
+  .trouble-item {
+    margin-bottom: 12px;
+    background: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .trouble-item .q {
+    background: #f0f4f8;
+    padding: 10px 14px;
+    font-weight: 600;
+    font-size: 12px;
+    color: #1a2a3a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .trouble-item .a {
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #3a4a5a;
+    line-height: 1.7;
+  }
+
+  /* ── Alt bilgi ───────────────────────────────────────────────────────────── */
+  .footer {
+    background: #0d1b2a;
+    color: rgba(255,255,255,0.4);
+    padding: 16px 48px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+  }
+  .footer span { color: #d4b890; }
+
+  /* ── Yatay çizgi ─────────────────────────────────────────────────────────── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(to right, #e8e0d0, transparent);
+    margin: 8px 0;
+  }
+
+  /* ── Baskı ───────────────────────────────────────────────────────────────── */
+  @media print {
+    body { background: #fff; font-size: 11px; }
+    .page { box-shadow: none; max-width: 100%; }
+    .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .code-block { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .url-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .section { page-break-inside: avoid; }
+    .platform-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ════════════════════ BAŞLIK ════════════════════ -->
+  <div class="header">
+    <div class="header-top">
+      <div class="logo-area">
+        <h1>⚙ ERGENEKON</h1>
+        <div class="sub">Entegre Arazi &amp; Finans Yönetim Sistemi</div>
+      </div>
+      <div class="version-badge">v2.0 · HTTPS</div>
+    </div>
+    <div class="header-title">
+      <h2>Hızlı Başlangıç Kılavuzu</h2>
+      <p>Docker ile kurulum · Sertifika aktivasyonu · Erişim adresleri · Günlük kullanım</p>
+    </div>
+  </div>
+
+  <!-- ════════════════════ İÇİNDEKİLER ════════════════════ -->
+  <div class="toc">
+    <div class="toc-item"><div class="num">1</div> Gereksinimler</div>
+    <div class="toc-item"><div class="num">2</div> İlk Kurulum</div>
+    <div class="toc-item"><div class="num">3</div> Sertifika Aktivasyonu</div>
+    <div class="toc-item"><div class="num">4</div> Erişim Adresleri</div>
+    <div class="toc-item"><div class="num">5</div> Günlük Kullanım</div>
+    <div class="toc-item"><div class="num">6</div> Sorun Giderme</div>
+  </div>
+
+  <!-- ════════════════════ İÇERİK ════════════════════ -->
+  <div class="content">
+
+    <!-- ── BÖLÜM 1: GEREKSİNİMLER ── -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">1</div>
+        <h3>Gereksinimler <span class="hint">— Kuruluma başlamadan önce</span></h3>
+      </div>
+
+      <ul class="steps">
+        <li>
+          <div>
+            <div class="label">Docker Desktop kurulu ve çalışıyor olmalı</div>
+            <div class="desc">Sürüm 4.0 veya üzeri · Windows, Linux ve macOS desteklenir · <strong>docker.com/get-started</strong> adresinden indirilebilir</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <div class="label">Proje klasörü hazır olmalı</div>
+            <div class="desc">Tüm sistem dosyaları tek bir klasörde bulunmalıdır (örn. <code>E:\Entegre sistem</code>) · docker-compose.yml bu klasördedir</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <div class="label">80, 443, 4443 portları boş olmalı</div>
+            <div class="desc">Bu portları kullanan başka bir uygulama çalışıyorsa <code>.env</code> dosyasından değiştirilebilir (PROXY_HTTP_PORT, PROXY_HTTPS_PORT, PROXY_OTUKEN_PORT)</div>
+          </div>
+        </li>
+      </ul>
+
+      <div class="info-box tip">
+        <div class="icon">💡</div>
+        <div>Minimum sistem gereksinimi: <strong>4 GB RAM</strong>, <strong>10 GB disk</strong>. PostgreSQL + Redis + 6 container aynı anda çalışır.</div>
+      </div>
+    </div>
+
+    <!-- ── BÖLÜM 2: İLK KURULUM ── -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">2</div>
+        <h3>İlk Kurulum <span class="hint">— Sadece 3 komut</span></h3>
+      </div>
+
+      <div class="info-box ok">
+        <div class="icon">✅</div>
+        <div>Sertifika üretimi, veritabanı migrasyonları ve servis başlatma <strong>otomatik</strong> gerçekleşir. Herhangi bir araç kurmana gerek yok.</div>
+      </div>
+
+      <div class="code-block" data-label="Terminal / Komut İstemi">
+        <pre><span class="comment"># 1. Proje klasörüne gir</span>
+<span class="cmd">cd</span> <span class="path">"E:\Entegre sistem"</span>
+
+<span class="comment"># 2. Sistemi başlat (ilk seferde 3-5 dakika sürer)</span>
+<span class="cmd">docker-compose up -d</span>
+
+<span class="comment"># 3. Tüm servislerin çalıştığını doğrula</span>
+<span class="cmd">docker-compose ps</span></pre>
+      </div>
+
+      <ul class="steps">
+        <li>
+          <div>
+            <div class="label">docker-compose up -d çalıştır</div>
+            <div class="desc">İlk seferde Docker imajları indirilir ve derlenir · <code>cert-init</code> servisi otomatik SSL sertifikası üretir · Veritabanı şeması otomatik kurulur</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <div class="label">docker-compose ps ile durum kontrol et</div>
+            <div class="desc">Tüm servislerin durumu <strong>Up</strong> olmalı · <code>cert-init</code> servisi <strong>Exited (0)</strong> gösterirse normaldir — görevini tamamlayıp kapandı demektir</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <div class="label">nginx/certs/ klasöründe ca.crt dosyasını bul</div>
+            <div class="desc">Bu dosya sertifika aktivasyonu için gereklidir · Bir sonraki adımda kullanacaksın</div>
+          </div>
+        </li>
+      </ul>
+
+      <div class="info-box warn">
+        <div class="icon">⚠️</div>
+        <div><strong>İlk kurulumda</strong> tarayıcı güvenlik uyarısı gösterir. Bu normaldir — sertifikayı sisteme tanıtmadan önce geçici bir durumdur. Bölüm 3'teki adımları uyguladıktan sonra uyarı tamamen kaybolur.</div>
+      </div>
+    </div>
+
+    <!-- ── BÖLÜM 3: SERTİFİKA AKTİVASYONU ── -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">3</div>
+        <h3>Sertifika Aktivasyonu <span class="hint">— Sadece bir kez yapılır</span></h3>
+      </div>
+
+      <p style="font-size:12px;color:#5a6a7a;margin-bottom:14px;">
+        Tarayıcının kilit ikonunu yeşil göstermesi için CA sertifikasını işletim sistemine tanıtman gerekir.
+        Bu işlem <strong>format sonrası da tekrarlanır</strong> — ama her başlatmada değil, sadece yeni bir makineye kurarken.
+      </p>
+
+      <div class="platform-grid">
+
+        <!-- Windows -->
+        <div class="platform-box windows">
+          <div class="platform-title">🪟 Windows</div>
+          <ol>
+            <li>Dosya Gezgini'ni aç</li>
+            <li><code>nginx\certs\</code> klasörüne git</li>
+            <li><code>ca.crt</code> dosyasına <strong>çift tıkla</strong></li>
+            <li>"Sertifikayı Yükle" butonuna tıkla</li>
+            <li>Depo: <strong>"Yerel Makine"</strong> seç → İleri</li>
+            <li>"Tüm sertifikaları aşağıdaki depoya yerleştir" seç</li>
+            <li><strong>"Güvenilen Kök Sertifika Yetkilileri"</strong> seç</li>
+            <li>Son → Evet → Tamam</li>
+            <li>Tarayıcıyı tamamen kapat ve yeniden aç</li>
+          </ol>
+        </div>
+
+        <!-- Linux -->
+        <div class="platform-box linux">
+          <div class="platform-title">🐧 Linux (Ubuntu / Debian)</div>
+          <ol>
+            <li>Terminal aç</li>
+            <li>Proje klasörüne git</li>
+            <li>Aşağıdaki komutları çalıştır:</li>
+          </ol>
+          <div class="code-block" data-label="bash" style="margin-top:8px;padding:10px 14px;">
+            <pre style="font-size:11px;"><span class="cmd">sudo cp</span> <span class="path">nginx/certs/ca.crt</span> \
+  /usr/local/share/ca-certificates/
+<span class="cmd">sudo update-ca-certificates</span></pre>
+          </div>
+          <div style="font-size:11px;color:#2a5a3a;margin-top:6px;">Chrome için ekstra: <code>chrome://settings/certificates</code> → Authorities → Import → ca.crt</div>
+        </div>
+
+      </div>
+
+      <div class="info-box tip" style="margin-top:14px;">
+        <div class="icon">🔒</div>
+        <div>Aktivasyon sonrası tarayıcı adres çubuğunda <strong>kilit ikonu</strong> görünmelidir. "Bağlantı güvenli değil" uyarısı tamamen kaybolur. Firefox için tarayıcının kendi sertifika deposuna ayrıca ekleme gerekebilir.</div>
+      </div>
+
+      <div class="divider" style="margin-top:16px;"></div>
+
+      <p style="font-size:11px;color:#8a9ab0;margin-top:12px;">
+        <strong>Not:</strong> Üretilen sertifika <strong>10 yıl</strong> geçerlidir. Süre dolduğunda <code>nginx/certs/</code> klasörünü sil ve <code>docker-compose up -d</code> komutunu tekrar çalıştır — yeni sertifika otomatik üretilir.
+      </p>
+    </div>
+
+    <!-- ── BÖLÜM 4: ERİŞİM ADRESLERİ ── -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">4</div>
+        <h3>Erişim Adresleri</h3>
+      </div>
+
+      <table class="url-table">
+        <thead>
+          <tr>
+            <th>Sistem</th>
+            <th>Adres</th>
+            <th>Açıklama</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="url-badge umay">Umay</span></td>
+            <td><code class="url-cell" style="background:#e8f4ff;color:#1a4494;padding:3px 10px;border-radius:4px;font-family:Consolas;">https://localhost</code></td>
+            <td>Finans yönetim sistemi · Giriş ekranı</td>
+          </tr>
+          <tr>
+            <td><span class="url-badge api">Umay API</span></td>
+            <td><code class="url-cell" style="background:#fff3e0;color:#8a4000;padding:3px 10px;border-radius:4px;font-family:Consolas;">https://localhost/api/v1/docs</code></td>
+            <td>Swagger API dokümantasyonu</td>
+          </tr>
+          <tr>
+            <td><span class="url-badge otuken">Ötüken</span></td>
+            <td><code class="url-cell" style="background:#e8f8ec;color:#1a5030;padding:3px 10px;border-radius:4px;font-family:Consolas;">https://localhost:4443</code></td>
+            <td>Arazi &amp; operasyon sistemi · Giriş ekranı</td>
+          </tr>
+          <tr>
+            <td><span class="url-badge api">Ötüken API</span></td>
+            <td><code class="url-cell" style="background:#fff3e0;color:#8a4000;padding:3px 10px;border-radius:4px;font-family:Consolas;">https://localhost:4443/api/v1/docs</code></td>
+            <td>Swagger API dokümantasyonu</td>
+          </tr>
+          <tr>
+            <td style="color:#8a9ab0;font-size:11px;">HTTP redirect</td>
+            <td><code style="background:#f0f0f0;color:#6a7a8a;padding:3px 10px;border-radius:4px;font-family:Consolas;">http://localhost</code></td>
+            <td style="color:#8a9ab0;font-size:11px;">Otomatik olarak https://localhost'a yönlendirilir</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="info-box tip" style="margin-top:14px;">
+        <div class="icon">📱</div>
+        <div><strong>Aynı ağdaki başka bir cihazdan erişmek için:</strong> <code>localhost</code> yerine bu bilgisayarın IP adresini kullan (örn. <code>192.168.1.XX</code>). Sertifika aktivasyonunu o cihazda da tekrarla veya tarayıcı uyarısını "Yine de devam et" ile geç.</div>
+      </div>
+    </div>
+
+    <!-- ── BÖLÜM 5: GÜNLÜK KULLANIM ── -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">5</div>
+        <h3>Günlük Kullanım Komutları</h3>
+      </div>
+
+      <table class="cmd-table">
+        <thead>
+          <tr>
+            <th>İşlem</th>
+            <th>Komut</th>
+            <th>Not</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Sistemi başlat</td>
+            <td><code>docker-compose up -d</code></td>
+            <td>Tüm servisler arka planda çalışır</td>
+          </tr>
+          <tr>
+            <td>Sistemi durdur</td>
+            <td><code>docker-compose down</code></td>
+            <td>Veriler korunur, sadece containerlar durur</td>
+          </tr>
+          <tr>
+            <td>Servis durumu</td>
+            <td><code>docker-compose ps</code></td>
+            <td>Tüm servislerin durumu listelenir</td>
+          </tr>
+          <tr>
+            <td>Logları izle</td>
+            <td><code>docker-compose logs -f</code></td>
+            <td>Ctrl+C ile çıkılır, veriler silinmez</td>
+          </tr>
+          <tr>
+            <td>Belirli servis logu</td>
+            <td><code>docker-compose logs -f umay-backend</code></td>
+            <td>umay-backend, otuken-backend vb.</td>
+          </tr>
+          <tr>
+            <td>Yeniden başlat</td>
+            <td><code>docker-compose restart</code></td>
+            <td>Tüm servisleri yeniden başlatır</td>
+          </tr>
+          <tr>
+            <td>Güncelle &amp; yeniden başlat</td>
+            <td><code>docker-compose up -d --build</code></td>
+            <td>Kod değişikliği sonrası imajları yeniden derler</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="info-box ok" style="margin-top:12px;">
+        <div class="icon">🔄</div>
+        <div><strong>Bilgisayar yeniden başlatıldıktan sonra:</strong> Docker Desktop açıksa sistem otomatik çalışmaya devam eder (<code>restart: unless-stopped</code> ayarı aktif). Docker Desktop açık değilse <code>docker-compose up -d</code> komutunu çalıştır.</div>
+      </div>
+    </div>
+
+    <!-- ── BÖLÜM 6: SORUN GİDERME ── -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">6</div>
+        <h3>Sorun Giderme</h3>
+      </div>
+
+      <div class="trouble-item">
+        <div class="q">❓ Tarayıcı hâlâ güvenlik uyarısı gösteriyor</div>
+        <div class="a">
+          Sertifika aktivasyonu doğru yapılmamış olabilir. Bölüm 3'teki adımları tekrar dene. Windows'ta "Güvenilen Kök Sertifika Yetkilileri" deposuna eklendiğinden emin ol. Ardından tarayıcıyı tamamen kapat (tray ikonundan çık) ve yeniden aç. Firefox kullanıyorsan: <code>Ayarlar → Gizlilik → Sertifikaları Görüntüle → Yetkililer → İçe Aktar</code>.
+        </div>
+      </div>
+
+      <div class="trouble-item">
+        <div class="q">❓ "Port zaten kullanımda" hatası alıyorum</div>
+        <div class="a">
+          80, 443 veya 4443 portu başka bir uygulama tarafından kullanılıyor. <code>.env</code> dosyasına şu satırları ekleyerek port değiştir:<br>
+          <code>PROXY_HTTP_PORT=8080</code> &nbsp;·&nbsp; <code>PROXY_HTTPS_PORT=8443</code> &nbsp;·&nbsp; <code>PROXY_OTUKEN_PORT=8444</code>
+        </div>
+      </div>
+
+      <div class="trouble-item">
+        <div class="q">❓ cert-init servisi hata verdi, sertifikalar oluşmadı</div>
+        <div class="a">
+          <code>nginx/certs/</code> klasörünü sil ve tekrar dene: <code>docker-compose up -d</code>. Log için: <code>docker-compose logs cert-init</code>.
+        </div>
+      </div>
+
+      <div class="trouble-item">
+        <div class="q">❓ Bir servis "Exited" durumunda görünüyor</div>
+        <div class="a">
+          Servis loglarını kontrol et: <code>docker-compose logs &lt;servis-adı&gt;</code>. Çoğunlukla veritabanı bağlantısı gecikmesinden kaynaklanır — birkaç dakika bekleyip <code>docker-compose restart &lt;servis-adı&gt;</code> yeterlidir.
+        </div>
+      </div>
+
+      <div class="trouble-item">
+        <div class="q">❓ Sistemi tamamen sıfırlamak istiyorum</div>
+        <div class="a">
+          <strong style="color:#c0392b;">Dikkat: Aşağıdaki komut tüm verileri siler.</strong><br>
+          <code>docker-compose down -v</code> → Tüm containerlar ve volume'lar silinir. Ardından <code>docker-compose up -d</code> ile temiz kurulum başlatılır.
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /content -->
+
+  <!-- ════════════════════ ALT BİLGİ ════════════════════ -->
+  <div class="footer">
+    <div>Ergenekon Entegre Yönetim Sistemi · <span>Umay</span> &amp; <span>Ötüken</span></div>
+    <div>Bu belgeyi PDF olarak kaydet: <strong>Ctrl+P → PDF Olarak Kaydet</strong></div>
+    <div>2026</div>
+  </div>
+
+</div><!-- /page -->
+</body>
+</html>

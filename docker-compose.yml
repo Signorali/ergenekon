@@ -10,7 +10,12 @@ services:
   # =====================
 
   db:
-    image: postgis/postgis:16-3.4
+    # 3.7.0: PostGIS 16 + pgvector birleşik image (Ötüken geometrileri +
+    # Umay AI semantik arama). Ayrıntı: postgres/Dockerfile.
+    build:
+      context: ./postgres
+      dockerfile: Dockerfile
+    image: signorali/postgis-pgvector:16-3.4
     container_name: ergenekon-db
     restart: unless-stopped
     environment:
@@ -439,11 +444,46 @@ services:
     networks:
       - ergenekon_net
 
+  # =====================
+  # AI / Local LLM (3.7.0 — Faz 3: gerçek doğal dil yardımcısı)
+  # =====================
+  # Ollama ile yerel CPU LLM. Model ilk istekte yüklenir, OLLAMA_KEEP_ALIVE
+  # süresi geçince RAM'den düşürülür → idle maliyeti ~0.
+  # API: http://ergenekon-ai:11434  (yalnız iç ağ; nginx ekspoz edilmez).
+  #
+  # Model indirme (kurulumdan sonra TEK SEFER, ~4.4 GB):
+  #   docker exec ergenekon-ai ollama pull qwen2.5:7b-instruct-q4_K_M
+  #
+  # AI özelliği tenant'ta kapalıyken bu container ayakta kalsa bile
+  # backend onu hiç çağırmaz — yük üretmez.
+  ergenekon-ai:
+    image: ollama/ollama:0.4.7
+    container_name: ergenekon-ai
+    restart: unless-stopped
+    environment:
+      OLLAMA_KEEP_ALIVE: "30m"      # 30 dk istek gelmezse modeli unload et
+      OLLAMA_NUM_PARALLEL: "1"      # Tek istek paralel — RAM korur
+      OLLAMA_MAX_LOADED_MODELS: "1" # Aynı anda 1 model bellekte
+    volumes:
+      - ergenekon_ai_models:/root/.ollama
+    expose:
+      - "11434"
+    networks:
+      - ergenekon_net
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *default-logging
+
 networks:
   ergenekon_net:
     driver: bridge
 
 volumes:
+  ergenekon_ai_models:
+    driver: local
   ergenekon_pgdata:
     driver: local
   ergenekon_backups:

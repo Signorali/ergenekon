@@ -1,0 +1,14 @@
+FROM docker:27-cli
+
+LABEL org.opencontainers.image.title="Ergenekon Network Watchdog"
+LABEL org.opencontainers.image.description="Container Station / Portainer'in iç ağı kaldırmasını otomatik onarır"
+LABEL org.opencontainers.image.source="https://github.com/signorali/ergenekon"
+LABEL org.opencontainers.image.version="1.0.0"
+
+COPY network-watchdog.sh /watchdog.sh
+RUN chmod +x /watchdog.sh
+
+ENV NETWORK_NAME=entegresistem_ergenekon_net
+ENV INTERVAL=10
+
+ENTRYPOINT ["/watchdog.sh"]
