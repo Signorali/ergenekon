@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 # Ergenekon - Docker Hub Publish Script
 
-$VERSION = "3.7.2"
+$VERSION = "3.7.5"
 $HUB_USER = "signorali"
 
 $SERVICES = @{

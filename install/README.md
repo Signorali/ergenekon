@@ -41,6 +41,32 @@ SKIP_PULL=1 curl -fsSL https://get.umay.app/install | sudo bash
 
 **Test edilen platformlar:** Ubuntu 22.04, Debian 12, Raspberry Pi OS, QNAP Container Station, Synology Container Manager, CasaOS, Unraid.
 
+## 🤖 Yapay Zeka Asistanı (Opsiyonel — Faz 3 için ekstra şart)
+
+Umay AI Asistanı'nın gelişmiş özelliği (🧠 LLM modu, doğal dil sorgu)
+yerel **Ollama** container'ı (`ergenekon-ai`) gerektirir.
+
+| Mod | Gereksinim | Davranış |
+|---|---|---|
+| ⚡ Hızlı (Faz 1+2) | Standart kurulum yeterli | Kural tabanlı kategori önerisi, anomali tespiti, pgvector semantik arama |
+| 🧠 Gelişmiş (Faz 3) | x86_64 CPU + 6 GB serbest RAM + ~5 GB disk | Yerel LLM ile doğal dil yardımcısı (Qwen 2.5 7B) |
+
+**Gelişmiş modu aktif etmek için kurulumdan sonra:**
+
+```bash
+cd /opt/ergenekon
+docker compose exec ergenekon-ai ollama pull qwen2.5:7b-instruct-q4_K_M
+# ~4.4 GB model indirir, ~5 dk sürer
+```
+
+**ARM cihazlarda (Raspberry Pi, ARM QNAP):** Ollama image x86_64-only.
+`ergenekon-ai` servisini compose'tan çıkarın. Faz 1+2 sorunsuz çalışmaya
+devam eder; sadece 🧠 LLM butonu otomatik gizlenir (v3.7.1 probe sayesinde).
+
+**Düşük RAM'li QNAP/NAS'larda:** AI'yi tenant ayarlarından kapatabilirsiniz
+(`Ayarlar → AI Asistanı → ai_enabled = false`). Bu container ayakta kalsa
+bile backend onu hiç çağırmaz, yük üretmez.
+
 ## 📋 Kurulum Adımları (script ne yapıyor?)
 
 1. **Sistem kontrolleri** — root yetkisi, OS, RAM, disk

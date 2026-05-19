@@ -17,9 +17,10 @@ x-logging: &default-logging
     max-file: "3"
 
 services:
-  # ── Postgres ─────────────────────────────────────────────────────────────
+  # ── Postgres (PostGIS + pgvector) ────────────────────────────────────────
+  # v3.7.0: pgvector extension Umay AI semantik arama (Faz 2) için zorunlu.
   db:
-    image: postgis/postgis:16-3.4
+    image: signorali/postgis-pgvector:16-3.4
     container_name: ergenekon-db
     restart: unless-stopped
     environment:
@@ -265,6 +266,39 @@ services:
     networks:
       - ergenekon_net
 
+  # ── AI / Local LLM (3.7.0 — Faz 3, OPSIYONEL) ───────────────────────────
+  # Ollama ile yerel CPU LLM. AI tenant'ta kapalıysa hiç çağrılmaz, idle.
+  # API: http://ergenekon-ai:11434 (iç ağ, dış porta açık değil)
+  #
+  # ⚠️ DONANIM ŞARTI:
+  #   - x86_64 CPU (Ollama image ARM'da çalışmaz — ARM cihazlarda bu servisi
+  #     yorum satırına alın; AI kural-tabanlı Faz 1 yine çalışmaya devam eder)
+  #   - Boşta en az 6 GB serbest RAM (Qwen 2.5 7B Q4_K_M ~4.4 GB + overhead)
+  #   - Disk: model için ~5 GB
+  #
+  # Model indirme (kurulumdan sonra TEK SEFER):
+  #   docker compose exec ergenekon-ai ollama pull qwen2.5:7b-instruct-q4_K_M
+  ergenekon-ai:
+    image: ollama/ollama:0.4.7
+    container_name: ergenekon-ai
+    restart: unless-stopped
+    environment:
+      OLLAMA_KEEP_ALIVE: "30m"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+    volumes:
+      - ergenekon_ai_models:/root/.ollama
+    expose:
+      - "11434"
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *default-logging
+    networks:
+      - ergenekon_net
+
 # ── Volumes ────────────────────────────────────────────────────────────────
 volumes:
   ergenekon_pgdata:
@@ -274,6 +308,7 @@ volumes:
     name: ergenekon_umay_storage
   umay_backend_backups:
     name: ergenekon_umay_backups
+  ergenekon_ai_models:  # Ollama LLM model cache (~4.4 GB)
 
 # ── Networks ───────────────────────────────────────────────────────────────
 networks:

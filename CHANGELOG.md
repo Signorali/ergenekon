@@ -7,6 +7,155 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.7.5] - 2026-05-19 — Piyasa UX İyileştirme + Yedek Sistemi Düzeltmeleri
+
+### Düzeltmeler
+
+- **Dashboard piyasa kart "Piyasa" linki lisans sayfasına yönlendiriyordu**:
+  `<a href="/market">` tarayıcının tam sayfa reload'unu tetikliyor, reload
+  sırasında auth/license context'leri sıfırlanıp lisans yönlendirmesine
+  düşüyordu. `<Link to="/market">` (React Router) ile SPA navigation'a
+  geçildi.
+- **Formula sembollerde değişim yüzdesi/renk yoktu** (GRAM_ALTIN gibi):
+  Google Finance gerçek semboller için `change_percent` döner; formula
+  sembollerde upstream yok. Artık backend "bugünün ilk snapshot'una göre
+  delta" hesaplıyor (Türkiye saatine göre gün başı). Dashboard kart artık
+  yeşil/kırmızı kenarlık + ▲/▼ doğru gösteriyor.
+- **Chart modali dashboard'tan açılınca yarım görünüyordu**: `react-grid-
+  layout` grid item'larına `transform: translate(...)` uyguluyor, CSS spec
+  gereği `position: fixed` o transform context'ine göre konumlanıyor →
+  modal grid item içine sıkışıyordu. `createPortal` ile `document.body`'ye
+  taşındı, tam ekran açılıyor.
+- **AI Asistanı `transaction_embeddings` tablosu eksik kalabiliyordu**:
+  Migration 0079'daki `DO $$ ... EXCEPTION ... RETURN ...` graceful-degrade
+  pattern bazı PostgreSQL subtransaction timing'lerinde sessizce skip
+  yapıyordu (alembic_version=0080 olur ama tablo yok). Yeni migration
+  **0081** idempotent şekilde extension + tablo + index'i tamamlıyor —
+  başarılı kurulumlarda no-op.
+- **DB yine recreate olunca `public` schema kaybolabiliyordu**: 3.7.3'te
+  rastlanmıştı; junction migration bug fix'i + tiered cleanup
+  prosedürüyle telafi ediliyor.
+- **Hesap detay sayfası boş açıklamalarda kategori adı gösterilmiyordu**:
+  Tx listesindeki "—" yerine kategori adı (italic, soluk) — işlemler
+  sayfasıyla aynı pattern.
+
+### Piyasa UX
+
+- **Dashboard market kart**: Tıklanınca **168 saatlik fiyat grafiği**
+  açılır (Recharts, `stepAfter` çizgi — borsa kapalı saatlerinde düz
+  çizgi). **Fibonacci kaldırıldı** (saf grafik, sade tasarım).
+- **Mobile chart landscape**: Telefonda chart modalı açılınca ekran
+  otomatik landscape'e döner (Android Chrome — Screen Orientation API +
+  fullscreen). iOS Safari'de sessiz fallback.
+- **Mobile piyasa sayfası kompakt**: Al/Sat/Borç/Alacak/Plan butonları
+  kaldırıldı (masaüstünde duruyor) — sadece sembol + fiyat + değişim +
+  pin + sil. Sol alt köşede son güncelleme saati.
+- **Dashboard kartlarda zaman damgası**: Sağ alt köşede son veri saati
+  (HH:MM aynı gün, DD/MM HH:MM farklı gün), `--text-secondary` 10px
+  okunabilir ama öne çıkmıyor.
+
+### Piyasa altyapı
+
+- **200 saat retention**: Yeni cron `purge_old_market_snapshots` saatlik
+  `:07`'de `price_snapshots`'ı 200h rolling window'a sıkıştırır. Dedup
+  sayesinde sembol başına ~800 satır (200h × 12 - dedup) max. Storage
+  predictable, investment/obligation kodu etkilenmez (en son fiyatı
+  kullanırlar). Bir kerelik temizlik 5307 eski satırı sildi.
+- **`yfinance` paketi tamamen kaldırıldı** (`requirements.txt`'ten de):
+  Sistem kuralı — yatırım fonu hariç tüm semboller Google Finance
+  scraping'den gelir. yfinance hiçbir kod yolunda kullanılmıyor.
+
+### Geriye uyumluluk
+
+- API imzaları değişmedi. Schema değişimi yok (0081 idempotent, no-op
+  in healthy systems).
+- Mobil masaüstü farkları sadece UI; backend her ikisinde aynı.
+
+---
+
+## [3.7.4] - 2026-05-19 — Piyasa Veri Sıklığı + Sembol Detay Grafiği
+
+### Yeni özellikler
+
+- **Sembol detay grafiği (Dashboard kart + Piyasa sayfası tıklama)**:
+  Watchlist kartına veya piyasa sayfasındaki sembol etiketine tıklayınca
+  son **168 saat** fiyat geçmişi açılır. Recharts ile çizim, `stepAfter`
+  modu sayesinde borsa kapalı saatlerinde fiyat sabit çizgi olarak
+  görünür — gerçek davranış.
+- **Fibonacci retracement seviyeleri**: Window içindeki max/min'den
+  otomatik çıkarılır. 23.6 / 38.2 / **50** / **61.8** (altın oran) / 78.6
+  seviyeleri referans çizgileri olarak grafikte, son fiyata uzaklık
+  yüzdesi kart olarak gösterilir. Dalgalanma %0.5'ten azsa Fib gizlenir
+  (anlamsız sonuç vermesin).
+- **Hourly resolution endpoint param**: `GET /market/prices/{symbol}/history`
+  artık `hours` parametresini destekler (örn. `?hours=168`). Limit
+  3000'e çıkarıldı (5dk × 168 saat = 2016 nokta).
+
+### İyileştirmeler
+
+- **Piyasa polling: 15 dk → 5 dk**: Sembol fiyatları daha güncel.
+  `cron(minute={0,5,...,55})`.
+- **Snapshot dedup (kritik)**: `_fetch_and_save_prices` ve
+  `_evaluate_and_save_formula` her insert öncesi son cached snapshot ile
+  karşılaştırır; `price + currency + change_percent` aynıysa **INSERT
+  atlanır**. Borsa kapalı saatlerde (hafta sonu, gece, resmi tatil) Google
+  Finance aynı fiyatı dönmeye devam eder; eski sürüm her 15 dk'da
+  duplicate row yazardı. Yıllık tahmini tasarruf: **~%80 yazma azaltma**
+  hiç bilgi kaybı olmadan. Mevcut chart/investment/obligation kodu
+  etkilenmez (latest snapshot her zaman doğru veriyi gösterir).
+- **Mevcut yapı korundu**: Yeni tablo, yeni migration, yeni provider yok.
+  Sadece `worker.py` cron + `market_service.py` dedup mantığı + endpoint
+  `hours` param + frontend chart komponenti.
+
+---
+
+## [3.7.3] - 2026-05-19 — Yedek Sistemi Sağlamlaştırma (Critical)
+
+> Patch sürüm. Yalnızca `umay-backend` değişti, ama tüm imajlar versiyon
+> tutarlılığı için birlikte yayımlanır.
+
+### Düzeltmeler (kritik)
+
+- **Yedek dosyası corruption tespit edilemiyordu**: `_encrypt_file` tek seferde
+  `enc_path.write_bytes(fernet.encrypt(...))` yapıyordu — yazma sırasında kesinti
+  (disk dolması, OS crash, antivirus müdahalesi, transfer sırasında bir bit
+  flip) yarım .enc dosyası bırakıyordu. Dosya başı (`gAAAAAB...`) ve sonu
+  (`...==`) doğru görünüyor ama içerideki HMAC tutmuyor → restore sırasında
+  `InvalidToken` exception.
+- **Yanlış şifre / bozuk dosya = veritabanı silme cezası**: `restore_backup`'ın
+  `except` bloğunda `_nuclear_reset` çağrılıyordu (DROP SCHEMA public CASCADE
+  + alembic upgrade head). Bu davranış 2026-05-18'de canlı sisteme felaket
+  oldu: yedek decrypt başarısız → nuclear reset → DROP SCHEMA 30sn'de bitemedi
+  (worker container lock tutuyordu) → şema yarı silinmiş kaldı, restore hiç
+  yapılmadı, sistem brick.
+
+### Yeni davranış (v3.7.3)
+
+- **Atomic write**: `_encrypt_file` artık `target.tmp`'e yazar → `fsync` →
+  parent dizin `fsync` → `os.replace`. Yarım yazılma fiziksel olarak imkânsız.
+- **Round-trip verify**: `create_backup` sonrası dosya hemen decrypt edilip
+  byte-byte plaintext'le karşılaştırılır. Eşleşmezse dosya silinir, 500 döner.
+  Manifest'e `verified: true` flag'i yazılır.
+- **Wrong-password → 403 (DB DOKUNULMAZ)**: Eski "tamper detection" mantığı
+  kaldırıldı. Yanlış şifre veya bozuk dosya artık restore'u durdurur ama
+  veritabanına hiç dokunmaz. Hata mesajı: "Yedek açılamadı. Şifre yanlış
+  olabilir veya dosya bozuk olabilir. Veritabanına dokunulmadı."
+- **Yeni `POST /backup/{filename}/test` endpoint'i**: Yedeği decrypt'leyip
+  açılabildiğini test eder, restore YAPMAZ. Periyodik sağlık kontrolü için
+  (her hafta cron'dan çağırılabilir). Cevap: `openable`, `checksum_ok`,
+  `decrypted_size_bytes`.
+- **Upload-restore atomic write**: `POST /backup/upload-restore` da artık
+  yüklenen dosyayı atomic yazıyor — ağ kesintisi yarım dosya bırakmaz.
+
+### Geriye uyumluluk
+
+- Eski .enc dosyaları yeni kodla sorunsuz açılır (format değişmedi).
+- Manifest'siz eski yedekler için checksum doğrulama atlanır (sadece
+  decrypt-test çalışır).
+- Endpoint imzaları değişmedi.
+
+---
+
 ## [3.7.2] - 2026-05-14 — Kredi Kartı Ekstre Tarihi Patch
 
 ### Düzeltmeler
