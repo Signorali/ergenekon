@@ -7,6 +7,239 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.8.7] - 2026-06-11 — Grafik teknik analiz çizimleri (kalıcı + cihaz bağımsız) + Mıknatıs
+
+> Piyasa grafiğine profesyonel teknik analiz: çizimler artık **kullanıcı + sembol
+> başına kalıcı** ve cihazdan bağımsız. Ayrıca hesap/kategori kullanıcı-bazlı
+> görünüm ve zararlı hava olayı bildirim altyapısı. Geri uyumlu — yeni migration
+> yok (`market_chart_layouts` 0085'te mevcut). 3.8.6 hattının kaynaktan tam
+> senkron derlemesi (otuken operasyon/maliyet iyileştirmeleri dahil).
+
+### Yeni özellikler
+
+- **Grafik çizim kalıcılığı (KLineCharts):** Trend/ışın/yatay/fiyat/Fibonacci/
+  paralel çizimleri **kullanıcı + sembol başına** backend'e kaydedilir. Aynı
+  kullanıcı ister masaüstünden ister APK'dan açsın **aynı çizimleri + aynı zaman
+  filtresini** görür; **başka kullanıcı boş** görür (kişisel). Yeni uçlar:
+  `GET/PUT /market/charts/overlays` (`MarketChartLayout` yeniden kullanıldı,
+  `(tenant,user,symbol)` upsert — mükerrer kayıt açmaz).
+- **Mıknatıs (snap):** Çizim noktaları en yakın mum fiyatına (Açılış/Yüksek/
+  Düşük/Kapanış) yapışır — buton döngülü: Kapalı → Zayıf → Güçlü. Çizimde hassasiyet.
+- **Çizim kilidi + geri-al:** Tüm çizimleri kilitle (yanlışlıkla taşımayı önler),
+  son çizimi geri al. Web (`PriceHistoryChart.tsx`) + mobil (WebView/iframe köprü).
+- **Hesaplar kullanıcı-odaklı:** Bakiye-azalan sıralama, 0 bakiyeli + diğer-grup
+  hesapları varsayılan gizli (filtreyle açılır), kendi grup önce; hesap hareketine
+  tıklayınca **işlem detayı** modalı (web + mobil).
+- **Mobil kategoriler kullanıcı-bazlı:** Mobilde görünen kategoriler ortak değil;
+  her kullanıcı yalnız kendi grubunun kategorilerini görür (admin dahil).
+- **Zararlı hava olayı bildirimi:** Don/dolu/fırtına gibi olaylarda push altyapısı
+  (otuken `/weather/alerts` + umay `send_weather_alerts` cron); weather client
+  retry+cache; "konum yok" ile "alınamadı" ayrımı.
+
+## [3.8.2] - 2026-06-04 — Otomatik güncelleyici: worker'lar + komut koruması (KRİTİK)
+
+> Küçük ama kritik bir bug fix. 3.8.1'in piyasa scraper düzeltmesi tek-tık
+> güncellemeyle worker'a ulaşmıyordu — bu sürüm onu çözer.
+
+### Bug fix'ler
+
+- **Tek-tık güncelleyici worker'ları güncellemiyordu:** `_UPDATE_TARGETS` yalnız
+  4 app imajını (umay/otuken backend+frontend) içeriyordu. Piyasa fiyatlarını
+  çeken **`umay-worker`** (ve `otuken-sync-worker`) güncelleme kapsamı dışındaydı
+  → güncelleme sonrası worker ESKİ kodla kalıyordu. Sonuç: 3.8.1'e güncelleyince
+  backend düzeldi ama piyasayı çeken worker eski (bozuk) scraper'da kaldı →
+  **piyasa fiyatları donuk göründü.** İki worker da hedeflere eklendi.
+- **`_recreate_container` komut override'ını (Cmd) korumuyordu:** container'ı
+  image'ın varsayılan CMD'iyle (`/start.sh` = backend) yeniden oluşturuyordu →
+  worker'lar `arq`/sync komutu yerine backend olarak ayağa kalkardı (cron hiç
+  çalışmazdı). Artık `command` + `entrypoint` korunuyor.
+
+## [3.8.1] - 2026-06-04 — Piyasa Düzeltme + Hesap Kurtarma + E-posta Sağlayıcı + Takvim Güvenlik
+
+> 3.8.0 üzerine ek özellikler + kritik bir bug fix. Geri uyumlu (yeni migration
+> 0083 additive). Canlı 3.7.7'den doğrudan 3.8.1'e geçebilir.
+
+### Bug fix'ler
+
+- **Piyasa verileri güncellenmiyordu** (dashboard kartları günlerce eski kaldı):
+  Google Finance, scraper'ın dayandığı `data-last-price` attribute'unu kaldırmış
+  → tüm semboller boş düşüyor, yalnız formül (GRAM_ALTIN) güncelleniyordu. Fiyat
+  artık güncel `.N6SYTe` öğesinden + gömülü `[fiyat,değişim,değişim%]` dizilerinden
+  okunuyor (tr-TR format ayrıştırma; endeks→POINT). **Kaynak kuralı korundu:
+  yalnız Google Finance + TEFAS.**
+
+### Yeni özellikler
+
+- **Hesap kurtarma (giriş ÖNCESİ):** 3 hatalı denemede IP kalıcı engellenince
+  kullanıcı (özellikle tek admin) kilitlenip kendini açamıyordu. İki yol eklendi:
+  - **Authenticator/yedek kod** ile IP engelini kaldırma (`/auth/recover/mfa`,
+    IP-engelinden muaf, rate-limit'li, MFA zorunlu, oturum açmaz, offline çalışır).
+  - **E-posta** ile şifre sıfırlama + IP açma (`/auth/recover/email` → kayıtlı
+    e-postaya tek-kullanımlık 30 dk'lık bağlantı → `/sifre-sifirla`).
+  - Giriş ekranına "Hesabımı kurtar / Şifremi unuttum" linkleri + public kurtarma
+    ve şifre-sıfırlama sayfaları.
+- **E-posta sağlayıcı yapılandırması (UI'dan, image rebuild GEREKMEZ):**
+  Ayarlar → Platform → E-posta. Sağlayıcı: **Resend / SendGrid** (tek API anahtarı,
+  HTTP API) veya **SMTP** (Gmail App Password). Vendor bir kez girer; son kullanıcı
+  hiçbir şey yapmaz. Gizli alanlar Fernet-şifreli (`system_settings`). Test
+  e-postası butonu. (`EmailService` sağlayıcı-tabanlı: `_effective_email`, DB→env.)
+
+### Güvenlik / Mimari
+
+- **Takvim OAuth client secret artık Fernet-şifreli** saklanıyor (önceden düz
+  metindi). Entegrasyon UI'si netleştirildi: "bir kerelik YÖNETİCİ kurulumu →
+  sonra tüm kullanıcılar tek tık" açıklaması + **Redirect URI otomatik dolduruluyor**.
+  Google + Outlook OAuth akışı (vendor-seviyesi kimlik bilgileri) zaten mevcuttu.
+- **Migration 0083** — `system_settings` (global key/value, JSON; sırlar Fernet),
+  additive, down_rev 0082. E-posta sağlayıcı ayarı burada tutulur.
+
+## [3.8.0] - 2026-06-04 — Derin Denetim + Güvenlik + FİDE Döngüsü + Push Altyapısı
+
+> Büyük sürüm. Çok-ajanlı RUNTIME denetimiyle (gerçek token+curl+DB) bulunan 17
+> doğrulanmış bug (9 HIGH, 8 MED) + 18 LOW düzeltildi; FİDE/sezonluk ürün döngüsü
+> ve push bildirim altyapısı eklendi. Geri uyumlu (yeni migration 0082 additive).
+>
+> NOT: Geliştirme sürecinde 3.8.0–3.8.3 imajları `v` önekli tag'lerle
+> (`v3.8.x`) push edilmişti; in-app güncelleyici regex'i (`^\d+\.\d+\.\d+$`)
+> bu tag'leri görmez → canlıda güncelleme bildirimi çıkmadı. Tümü tek temiz
+> **3.8.0** (öneksiz) sürümünde konsolide edilip yeniden yayınlandı.
+
+### Güvenlik & Bug fix'ler (web RUNTIME denetimi)
+
+- **Ötüken cross-tenant scope (HIGH):** `otuken/app/api/deps.py` —
+  `app_groups.umay_group_id` eski slug (`arazi-default`) tutunca admin-olmayan
+  kullanıcılar operations/sales/trees/dsi'de 403 alıyordu. Paylaşılan
+  `caller_can_access_app_group` çözümleyici (UUID eşleşmezse slug→code/name,
+  yalnız kullanıcının KENDİ grupları). Admin yolu + DB korunarak.
+- **Finance-sync auth (HIGH+MED):** otuken→umay push artık X-API-Key servis
+  kimliğiyle (hmac.compare_digest); non-retryable (401/403/422) dead-letter'lar
+  periyodik bakımda SKIP edilir (sonsuz churn döngüsü durdu).
+- **Kredi kartı IDOR (HIGH):** `credit_cards.py` /{id}/purchases + /statements
+  grup-erişim kontrolü; skip/limit → page/page_size.
+- **Ekipman bakım listesi (HIGH):** `equipment/service.py` legacy
+  `farm.equipment_items` yerine `farm.inventory_items` (DEMIRBAS).
+- **Hesap hareketleri (MED):** `accounts.py` bozuk date_from/to artık 422
+  (eskiden 500).
+- **Dashboard (MED):** `dashboard_service.py` recent_transactions admin'de tüm
+  tenant'ı + NULL-grup kayıtlarını kapsıyor.
+- **Krediler (MED):** overdue türetimi (PENDING/PARTIALLY_PAID + due_date<today),
+  `is_overdue` computed alanı + LoansPage/LoanDetailPage rozeti.
+- **Raporlar (MED):** asset_report alış-anı kuru (fx_purchase) ile canlı kur
+  (fx_current) ayrıldı.
+- **Frontend:** CalendarPage limit 2000→500, DocumentsPage file_size_bytes,
+  Ötüken LandPage negatif koordinat viewBox kırpılması.
+- **18 LOW temizliği:** market widget, net_worth FX-toplama, tx effective_type,
+  liste ORDER BY, categories grup kontrolü, reports realized P&L avg-cost,
+  reçete ASCII-normalize, investments/assets UI etiketleri vb.
+
+### Yeni özellikler
+
+- **FİDE / sezonluk ürün döngüsü** (Ötüken): `AreaSeasonModal` — alana fide dik
+  (stoktan FIFO düşüm), hasat (stok girişi), sezon kapat. "Alan Ürünleri"
+  sekmesinde 🌱 Fide Dik / 🌾 Hasat / 🏁 Sezon Kapat. Backend mevcut uçları
+  kullanır (değişmedi).
+- **Push bildirim altyapısı:** `device_tokens` (model + Alembic **0082**,
+  additive) + `push_service.py` (Expo Push, DeviceNotRegistered→pasif) +
+  `notification_service.py` **after_commit** fire-and-forget hook (in-app
+  bildirim → push, mevcut akışı bloklamaz) + `POST/DELETE /notifications/devices`.
+  Mobil: expo-notifications kayıt akışı (giriş/MFA/yenileme). TESLİMAT için
+  EAS projectId + FCM/APNs + APK rebuild kullanıcı tarafında.
+
+### Mobil
+
+- **Veri paritesi (RUNTIME):** 7 ekran düzeltildi — asıl kök neden iş verisinin
+  Mayıs 2026'da olup mobilin "bu ay/son 3 gün" varsayılan filtreleriyle boş
+  görünmesiydi. Dashboard net_worth, Hesap Hareketleri/İşlemler tarih
+  varsayılanları, Raporlar auto-seek, Takvim limit 422 fix, Envanter item_kind
+  filtre, Yatırımlar portföy-merkezli.
+- **Para biçimi:** tüm parasal değerler virgülden sonra 2 hane + yabancı para
+  birim etiketi (`currency.ts` formatMoney `min/maxFrac` tabanı 2'ye yükseltildi;
+  Ötüken'in virgüllü/özel-ondalık değerleri korundu).
+
+### Mimari / Altyapı
+
+- **nginx `/umay-api` resolver fix:** son hardcoded proxy_pass yolu da
+  `set $var; proxy_pass $var;` + `resolver 127.0.0.11` desenine çevrildi →
+  backend recreate'te stale-IP 502 olmaz (tek-servis güncellemede self-heal ~4s).
+- **Alembic 0082** (device_tokens) — down_rev 0081, additive; restart'ta
+  `alembic upgrade head` ile uygulanır.
+
+## [3.7.7] - 2026-05-19 — Çoklu Ürün + Arazi Düzenleme + Stok Kartı UX
+
+> Büyük özellik sürümü. Geri uyumlu — eski tek-ürün payload formatı çalışmaya
+> devam eder. Versiyon 3.7.6 atlandı (geliştirme sürecinde stabilize edilmedi,
+> birden fazla feature 3.7.7'de toplandı).
+
+### Yeni özellikler
+
+- **Çoklu ürün alışveriş kaydı** (TransactionsPage + CreditCardsPage):
+  Tek bir alımda (örn. 3250 ₺) artık N farklı ürün satırı eklenebilir. Her
+  satır kendi tutarı, miktarı, birimi, tedarikçisi ile gelir. Satırların
+  toplamı işlem tutarıyla eşleşmek zorunda — bileşen otomatik kontrol eder
+  ve uyumsuzsa "Son satıra ekle" düğmesiyle farkı kapatır.
+  - Backend schemas (`StockMovementCreate`): yeni `line_amount` alanı (₺)
+  - `TransactionCreate` + `PurchaseCreate`: `stock_movements: List[...]`
+    array desteği (eski `stock_movement` tekil hâlâ kabul edilir)
+  - Backend endpoints: her satır için ayrı Ötüken stok hareketi
+    (unit_price = line_amount / quantity ile)
+  - Frontend yeni paylaşımlı bileşen: `MultiStockEntry.tsx`
+- **Inline "Yeni Stok Kartı" formu** Umay'da artık tam:
+  - Stok Davranışı, Stok Adı, Stok Kodu (otomatik üretilebilir),
+    Marka, **Stok Türü** (Ötüken ile ortak katalog, + Yeni Tür ekleme),
+    Birim, **Not** alanları eklendi.
+  - **Stok Kodu otomatik üretimi**: boş bırakırsa `STK-NNN` olarak
+    en yüksek mevcuttan +1 ile üretir.
+  - **Ortak Stok Türü kataloğu**: Umay artık Ötüken'in
+    `farm.app_settings.type_catalog.stockTypes`'ından çekiyor — yeni
+    eklenen türler iki sistemde de görünür.
+- **Ötüken Arazi**:
+  - **Yapı düzenleme modali**: tablodan "Düzenle" → modal'da X/Y/En/Boy
+    sayısal değişiklik yapılabilir.
+  - **Sağ-tık menüsü ile yapı/alan taşıma**: nesne üzerinde sağ-tık →
+    "🖐 Seç ve Taşı" → fareyle sürükle → sol-tık ile bırak. Arazi sınırı
+    içinde otomatik clamp. Ağaçlar drag DESTEKLEMEZ (kasıtlı —
+    sadece tablo "Düzenle" ile koordinat değiştirilebilir).
+  - **CSV ile toplu ağaç ekleme**: Modal'da Şablon İndir → Excel'de
+    doldur → Dosya Yükle → "Hepsini Ekle". Encoding-tolerant parser
+    (UTF-8 / Windows-1254 auto-detect). ASCII başlıklı şablon (`X,Y,Cins,Tur,Yil,Aciklama`).
+  - **Ağaç düzenleme modali** + **Tüm Ağaçları Sil butonu**
+  - **`plantedYear` field** ağaç verisinde + tabloda otomatik "Yaş" kolonu
+  - **Ağaç ekleme grid snap kaldırıldı**: ekim noktaları 0.1m precision
+    snap'e geçti — kullanıcı verdiği koordinat aynen kaydedilir
+- **Yeni rapor: Üye × Grup Harcamaları**: "Ali Köken Ev grubuna ne
+  kadar harcamış?" sorusunu yanıtlar. Filtreler: Üye, Grup, Tüm Yıl
+  toggle. Tek-soru modu: büyük cevap kartı + kategori pie chart +
+  aylık trend + işlem listesi.
+- **Mobil piyasa**: kartlar kompakt, Al/Sat/Borç/Alacak/Plan butonları
+  kaldırıldı (masaüstünde duruyor), zaman damgası sol alt.
+
+### Bug fix'ler
+
+- **`.land-boundary` SVG path mouse event'leri yakalıyordu**: arazi
+  sınırı (kırmızı çizgi) yapı/alan rect'lerinin üstünde render edildiği
+  için sağ-tık menüsü hiç açılmıyordu. CSS'te `pointer-events: none`
+  eklendi — sınır görünür ama tıklama geçirgen.
+- **`sanitizePointList` `plantedYear` alanını siliyordu**: ağaç ekim
+  yılı canvas save+reload sonrası kayboluyordu. Field whitelist'e
+  eklendi.
+- **Migration 0079 graceful-degrade bug**: pgvector +
+  transaction_embeddings bazı kurulumlarda sessizce skip ediliyordu.
+  Idempotent recovery için yeni migration 0081.
+- **Üye×Grup raporu artık tüm tipleri kapsıyor**: sadece EXPENSE değil,
+  TRANSFER ve INCOME da gösteriliyor (kredi kartı/kredi ödemeleri zaten
+  Transaction.EXPENSE'tir, ayrı tablo yok).
+
+### Mimari
+
+- **Backend `stock_movements` array desteği** geri uyumlu — eski
+  istemciler `stock_movement` (tekil) göndermeye devam eder.
+- **`MultiStockEntry.tsx` paylaşımlı bileşen** — iki ana sayfa (Transactions
+  ve CreditCards) tarafından kullanılır, kod tekrarı yok.
+- **Ortak katalog**: Umay → Ötüken `app_settings` endpoint üzerinden
+  stockTypes okur/yazar; iki sistemde de aynı liste görünür.
+
+---
+
 ## [3.7.5] - 2026-05-19 — Piyasa UX İyileştirme + Yedek Sistemi Düzeltmeleri
 
 ### Düzeltmeler
