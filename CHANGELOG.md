@@ -7,6 +7,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [Semantic
 
 ---
 
+## [3.8.8] - 2026-06-11 — Canlı binlik ayırıcı + Takvim + Admin piyasa çekim paneli
+
+> Geniş UX + admin kontrol sürümü. Para/sayı girişlerinde yazarken canlı binlik
+> ayırıcı, tarih alanlarında takvim, ve yöneticiye özel dinamik piyasa veri-çekim
+> paneli. Geri uyumlu — **yeni migration yok** (ayarlar `system_settings`'te).
+
+### Yeni özellikler
+
+- **Yazarken canlı binlik ayırıcı (tr-TR):** Tutar/miktar/alan/litre girişlerinde
+  "100000" → anlık "100.000" (ondalık virgül, imleç korumalı). Mobil `NumberInput`
+  (native + web), masaüstü `MoneyInput` (Umay+Ötüken). FX ondalık ayırıcı düzeltmesi.
+- **Tarih alanlarında takvim:** `DateField` — native `DateTimePicker`, web `<input type=date>`
+  (Umay+Ötüken; filtre + form tarihleri).
+- **Admin piyasa veri-çekim paneli** (Piyasa sayfası, ⚙️ modal — yalnız yönetici/masaüstü):
+  çekim aralığı + semboller arası bekleme + jitter + **saklama süresi** + piyasa-saati
+  kapısı, canlı **DB-yük/risk tahmini** ile. Worker poll'u artık cron yerine
+  **kendini-yeniden-zamanlayan döngü** (dinamik aralık, restart'sız etki); purge
+  retention'ı ayardan okur.
+- **Sembol silince cascade temizlik:** Watchlist'ten sembol kaldırılınca ona ait
+  piyasa verisi (PriceSnapshot) + teknik analiz çizimleri (overlay) de silinir.
+- **Kart görünümü** (solid zemin + renkli parıltı, okunur) · **bu-ay varsayılan filtreler**
+  (işlemler/hesap/operasyon/satış) · **açılış hızlandırma** + çok-ajanlı denetim
+  düzeltmeleri (overlay dedup + resolution koruma).
+
 ## [3.8.7] - 2026-06-11 — Grafik teknik analiz çizimleri (kalıcı + cihaz bağımsız) + Mıknatıs
 
 > Piyasa grafiğine profesyonel teknik analiz: çizimler artık **kullanıcı + sembol
